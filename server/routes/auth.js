@@ -1,6 +1,11 @@
 import express from "express";
 
-import { exchangeCode, getUser, getGuildMember } from "../services/discord.js";
+import {
+    exchangeCode,
+    getUser,
+    getGuildMember,
+    getOAuthURL
+} from "../services/discord.js";
 import { createJWT } from "../services/jwt.js";
 import { saveSession } from "../services/users.js";
 import { auth } from "../middleware/auth.js";
