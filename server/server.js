@@ -2,14 +2,12 @@ import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
 
+import env from "./config/env.js";
+import "./config/db.js";
+
 const app = express();
-const PORT = 3000;
 
 app.use(express.json());
-
-app.get("/api/hello", (req, res) => {
-    res.json({ message: "Hello from Express!" });
-});
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -22,6 +20,6 @@ app.get("/{*splat}", (req, res) => {
     res.sendFile(path.join(dist, "index.html"));
 });
 
-app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+app.listen(env.PORT, () => {
+    console.log(`Server listening on http://localhost:${env.PORT}`);
 });
