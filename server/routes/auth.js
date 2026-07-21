@@ -4,7 +4,8 @@ import {
     exchangeCode,
     getUser,
     getGuildMember,
-    getOAuthURL
+    getOAuthURL,
+    hasRequiredRole
 } from "../services/discord.js";
 import { createJWT } from "../services/jwt.js";
 import { saveSession } from "../services/users.js";
