@@ -8,6 +8,7 @@ import {
 } from "../services/discord.js";
 
 import { createJWT } from "../services/jwt.js";
+import { saveSession } from "../services/users.js";
 
 const router = Router();
 
@@ -37,18 +38,34 @@ router.get("/callback", async (req, res) => {
             return res.status(403).send("Missing required role");
         }
 
-        const jwt = createJWT(discordUser.id);
+        const tokenJWT = createJWT(discordUser.id);
+
+        const decoded = JSON.parse(
+            Buffer.from(
+                tokenJWT.split(".")[1],
+                "base64"
+            ).toString()
+        );
+
+
+        await saveSession(
+            discordUser.id,
+            tokenJWT,
+            new Date(decoded.exp * 1000)
+        );
+
 
         res.cookie(
             "token",
-            jwt,
+            tokenJWT,
             {
                 httpOnly: true,
-                secure: false, // true later with HTTPS
                 sameSite: "lax",
+                secure: false,
                 maxAge: 1000 * 60 * 60 * 24 * 7
             }
         );
+
 
         res.redirect("/");
 
@@ -61,18 +78,31 @@ router.get("/callback", async (req, res) => {
     }
 });
 
-router.get("/me", (req, res) => {
+router.get("/me", async (req,res)=>{
+
     const token = req.cookies.token;
 
-    if (!token) {
+    if(!token){
         return res.status(401).json({
-            authenticated: false
+            authenticated:false
         });
     }
 
     res.json({
-        authenticated: true
+        authenticated:true
     });
+
+});
+
+
+router.post("/logout", async(req,res)=>{
+
+    res.clearCookie("token");
+
+    res.json({
+        success:true
+    });
+
 });
 
 export default router;
