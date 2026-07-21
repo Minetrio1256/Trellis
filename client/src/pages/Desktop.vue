@@ -15,13 +15,20 @@ const username = "minetrio1256";
 
   <div class="desktop">
 
+    <StartMenu
+        v-if="open"
+        :username="username"
+    />
+
 
     <div class="taskbar">
 
       <button
+          class="start-button"
           @click="open = !open"
       >
-        <b>▣ Start</b>
+        <img src="https://win98icons.alexmeub.com/icons/png/windows-0.png">
+        <b>Start</b>
       </button>
 
 
@@ -31,14 +38,6 @@ const username = "minetrio1256";
 
     </div>
 
-
-    <button
-        class="start-button"
-        @click="open = !open"
-    >
-      <img src="https://win98icons.alexmeub.com/icons/png/windows-0.png">
-      Start
-    </button>
 
   </div>
 
@@ -54,44 +53,50 @@ const username = "minetrio1256";
 
   background:#008080;
 
+  overflow:hidden;
+
 }
 
 
 .taskbar {
 
-  position: fixed;
+  position:fixed;
 
-  bottom: 0;
-  left: 0;
+  bottom:0;
+  left:0;
 
-  width: 100%;
-  height: 40px;
+  width:100%;
+  height:40px;
 
-  box-sizing: border-box;
 
-  background: #c0c0c0;
+  box-sizing:border-box;
 
-  border-top: 2px solid white;
 
-  display: flex;
-  align-items: center;
+  background:#c0c0c0;
 
-  padding: 2px;
+  border-top:2px solid white;
 
-  z-index: 1000;
+
+  display:flex;
+
+  align-items:center;
+
+  padding:2px;
+
+  z-index:1000;
+
 }
 
 
 .start-button {
 
-  height: 32px;
+  height:32px;
 
   display:flex;
+
   align-items:center;
 
-  gap:4px;
-
-  font-weight:bold;
+  gap:5px;
 
 }
 
@@ -108,17 +113,21 @@ const username = "minetrio1256";
 
   margin-left:auto;
 
-  height:30px;
 
+  height:30px;
   min-width:80px;
 
-  box-sizing:border-box;
 
   display:flex;
+
   align-items:center;
+
   justify-content:center;
 
+
   border-style:inset;
+
+  padding:0 5px;
 
 }
 

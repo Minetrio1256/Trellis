@@ -7,68 +7,88 @@ defineProps({
 });
 </script>
 
+
 <template>
   <div class="start-menu window">
 
+    <!-- Left blue branding strip -->
     <div class="brand">
       <span>Trellis 98</span>
     </div>
 
 
-    <div class="menu">
+    <!-- Right side -->
+    <div class="content">
 
-      <div class="menu-item">
-        <span>🗂</span>
-        Programs
-        <b>▶</b>
+
+      <!-- Main programs -->
+      <div class="menu">
+
+        <div class="menu-item">
+          <span>📁</span>
+          Programs
+          <b>▶</b>
+        </div>
+
+
+        <div class="menu-item">
+          <span>⭐</span>
+          Favorites
+          <b>▶</b>
+        </div>
+
+
+        <div class="menu-item">
+          <span>📄</span>
+          Documents
+          <b>▶</b>
+        </div>
+
+
+        <div class="menu-item">
+          <span>⚙</span>
+          Settings
+          <b>▶</b>
+        </div>
+
+
+        <div class="menu-item">
+          <span>🔍</span>
+          Find
+          <b>▶</b>
+        </div>
+
+
+        <div class="menu-item">
+          <span>❓</span>
+          Help
+        </div>
+
+
       </div>
 
-      <div class="menu-item">
-        <span>⭐</span>
-        Favorites
-        <b>▶</b>
+
+      <div class="separator"></div>
+
+
+      <!-- Bottom actions -->
+      <div class="bottom">
+
+
+        <div class="menu-item">
+          <span>🔑</span>
+          Log Off {{ username }}...
+        </div>
+
+
+        <div class="menu-item">
+          <span>⏻</span>
+          Shut Down...
+        </div>
+
+
       </div>
 
-      <div class="menu-item">
-        <span>📄</span>
-        Documents
-        <b>▶</b>
-      </div>
-
-      <div class="menu-item">
-        <span>⚙</span>
-        Settings
-        <b>▶</b>
-      </div>
-
-      <div class="menu-item">
-        <span>🔍</span>
-        Find
-        <b>▶</b>
-      </div>
-
-      <div class="menu-item">
-        <span>❓</span>
-        Help
-      </div>
-
-    </div>
-
-
-    <hr>
-
-
-    <div class="bottom">
-
-      <div class="menu-item">
-        <span>🔑</span>
-        Log Off {{ username }}...
-      </div>
-
-      <div class="menu-item">
-        <span>💻</span>
-        Shut Down...
-      </div>
 
     </div>
 
@@ -92,18 +112,24 @@ defineProps({
 
   display:flex;
 
-  flex-direction:row;
-
 
   background:#c0c0c0;
 
+
+  border:2px outset white;
+
+
   box-sizing:border-box;
 
-  padding:0;
 
-  z-index:999;
+  z-index:9999;
 
 }
+
+
+/*
+    Blue vertical Trellis 98 banner
+*/
 
 .brand {
 
@@ -111,7 +137,9 @@ defineProps({
 
   flex-shrink:0;
 
+
   background:#000080;
+
 
   display:flex;
 
@@ -126,6 +154,7 @@ defineProps({
 
   color:white;
 
+
   writing-mode:vertical-rl;
 
   transform:rotate(180deg);
@@ -135,20 +164,42 @@ defineProps({
 
   font-weight:bold;
 
+
   letter-spacing:1px;
+
 
   margin-bottom:10px;
 
 }
 
 
-.menu {
+/*
+    Everything on the right
+*/
+
+.content {
 
   flex:1;
+
 
   display:flex;
 
   flex-direction:column;
+
+
+  padding:4px;
+
+}
+
+
+
+/*
+    Main menu items
+*/
+
+.menu {
+
+  flex:1;
 
 }
 
@@ -157,24 +208,81 @@ defineProps({
 
   height:34px;
 
-  flex-shrink:0;
+
+  display:flex;
+
+  align-items:center;
+
+
+  gap:8px;
+
+
+  padding:0 8px;
+
+
+  box-sizing:border-box;
+
+
+  user-select:none;
+
+
+  white-space:nowrap;
 
 }
 
 
 .menu-item:hover {
-  background: #000080;
+
+  background:#000080;
+
   color:white;
+
+}
+
+
+.menu-item span {
+
+  width:22px;
+
+  text-align:center;
+
 }
 
 
 .menu-item b {
+
   margin-left:auto;
+
 }
 
 
+/*
+    Divider
+*/
+
+.separator {
+
+  height:2px;
+
+  background:#808080;
+
+  border-bottom:1px solid white;
+
+
+  margin:4px 0;
+
+}
+
+
+
+/*
+    Bottom buttons
+*/
+
 .bottom {
-  padding: 4px;
+
+  flex-shrink:0;
+
 }
 
 
