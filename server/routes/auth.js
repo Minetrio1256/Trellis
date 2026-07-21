@@ -74,12 +74,22 @@ router.get("/callback", async (req, res) => {
 });
 
 router.get("/me", auth, async (req, res) => {
+
+    const discordUser = await getUser(
+        req.user.accessToken
+    );
+
+
     return res.json({
         authenticated: true,
         user: {
-            id: req.user.id
+            id: discordUser.id,
+            username: discordUser.username,
+            global_name: discordUser.global_name,
+            avatar: discordUser.avatar
         }
     });
+
 });
 
 

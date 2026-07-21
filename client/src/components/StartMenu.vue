@@ -76,7 +76,10 @@ defineProps({
 
 
         <div class="menu-item">
-          <span>🔑</span>
+          <img
+              class="menu-icon"
+              src="https://win98icons.alexmeub.com/icons/png/key_win-3.png"
+          />
           Log Off {{ username }}...
         </div>
 
@@ -253,6 +256,13 @@ defineProps({
 
   margin-left:auto;
 
+}
+
+.menu-icon {
+  width:22px;
+  height:22px;
+
+  image-rendering:auto;
 }
 
 

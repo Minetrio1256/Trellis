@@ -1,12 +1,79 @@
 <script setup>
 
-import { ref } from "vue";
+import { ref, onMounted, onUnmounted } from "vue";
 import StartMenu from "../components/StartMenu.vue";
+
+
+defineProps({
+  user: {
+    type: Object,
+    required: true
+  }
+});
 
 
 const open = ref(false);
 
-const username = "minetrio1256";
+const time = ref("");
+
+let clockInterval;
+
+
+function updateClock() {
+
+  const now = new Date();
+
+
+  time.value = now.toLocaleTimeString(
+      [],
+      {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true
+      }
+  );
+
+}
+
+
+
+onMounted(() => {
+
+
+  // Startup sound
+
+  const audio = new Audio("/startup.wav");
+
+  audio.volume = 0.5;
+
+  audio.play()
+      .catch(err => {
+        console.log("Startup sound blocked:", err);
+      });
+
+
+
+  // Clock
+
+  updateClock();
+
+
+  clockInterval = setInterval(
+      updateClock,
+      1000
+  );
+
+
+});
+
+
+
+onUnmounted(() => {
+
+  clearInterval(clockInterval);
+
+});
+
 
 </script>
 
@@ -15,26 +82,36 @@ const username = "minetrio1256";
 
   <div class="desktop">
 
+
     <StartMenu
         v-if="open"
-        :username="username"
+        :username="user.username"
     />
 
 
     <div class="taskbar">
 
+
       <button
           class="start-button"
+          :class="{ active: open }"
           @click="open = !open"
       >
-        <img src="https://win98icons.alexmeub.com/icons/png/windows-0.png">
+
+        <img
+            src="https://win98icons.alexmeub.com/icons/png/windows-0.png"
+        />
+
         <b>Start</b>
+
       </button>
 
 
+
       <div class="clock">
-        12:00 PM
+        {{ time }}
       </div>
+
 
     </div>
 
@@ -45,6 +122,7 @@ const username = "minetrio1256";
 
 
 <style scoped>
+
 
 .desktop {
 
@@ -58,12 +136,18 @@ const username = "minetrio1256";
 }
 
 
+
+/*
+    Bottom taskbar
+*/
+
 .taskbar {
 
   position:fixed;
 
   bottom:0;
   left:0;
+
 
   width:100%;
   height:40px;
@@ -74,6 +158,7 @@ const username = "minetrio1256";
 
   background:#c0c0c0;
 
+
   border-top:2px solid white;
 
 
@@ -81,22 +166,35 @@ const username = "minetrio1256";
 
   align-items:center;
 
+
   padding:2px;
+
 
   z-index:1000;
 
 }
 
 
+
+/*
+    Start button
+*/
+
 .start-button {
 
   height:32px;
+
 
   display:flex;
 
   align-items:center;
 
+
   gap:5px;
+
+
+  padding:2px 8px;
+
 
 }
 
@@ -109,27 +207,50 @@ const username = "minetrio1256";
 }
 
 
+
+/*
+    Win98 pressed button effect
+*/
+
+.start-button.active {
+
+  border-style:inset;
+
+}
+
+
+
+/*
+    Clock
+*/
+
 .clock {
 
   margin-left:auto;
 
 
   height:30px;
+
   min-width:80px;
 
 
   display:flex;
 
-  align-items:center;
-
   justify-content:center;
+
+  align-items:center;
 
 
   border-style:inset;
 
-  padding:0 5px;
+
+  padding:0 8px;
+
+
+  box-sizing:border-box;
 
 }
+
 
 
 </style>
