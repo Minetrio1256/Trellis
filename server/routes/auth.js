@@ -47,13 +47,11 @@ router.get("/callback", async (req, res) => {
             ).toString()
         );
 
-
         await saveSession(
             discordUser.id,
             tokenJWT,
             new Date(decoded.exp * 1000)
         );
-
 
         res.cookie(
             "token",
@@ -66,15 +64,16 @@ router.get("/callback", async (req, res) => {
             }
         );
 
-
-        res.redirect("/");
-
         console.log("Authenticated:", discordUser);
 
-        res.send("Auth successful");
+        return res.redirect("/");
+
     } catch (err) {
         console.error(err.response?.data ?? err);
-        res.status(500).send("Authentication failed");
+
+        return res.status(500).send(
+            "Authentication failed"
+        );
     }
 });
 
