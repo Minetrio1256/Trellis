@@ -32,10 +32,13 @@ const username = "minetrio1256";
     </div>
 
 
-    <StartMenu
-        v-if="open"
-        :username="username"
-    />
+    <button
+        class="start-button"
+        @click="open = !open"
+    >
+      <img src="https://win98icons.alexmeub.com/icons/png/windows-0.png">
+      Start
+    </button>
 
   </div>
 
@@ -56,22 +59,47 @@ const username = "minetrio1256";
 
 .taskbar {
 
-  position:absolute;
+  position: fixed;
 
-  bottom:0;
-  left:0;
+  bottom: 0;
+  left: 0;
 
-  width:100%;
-  height:38px;
+  width: 100%;
+  height: 40px;
 
-  background:#c0c0c0;
+  box-sizing: border-box;
 
-  border-top:2px solid white;
+  background: #c0c0c0;
+
+  border-top: 2px solid white;
+
+  display: flex;
+  align-items: center;
+
+  padding: 2px;
+
+  z-index: 1000;
+}
+
+
+.start-button {
+
+  height: 32px;
 
   display:flex;
   align-items:center;
 
-  padding:2px;
+  gap:4px;
+
+  font-weight:bold;
+
+}
+
+
+.start-button img {
+
+  width:18px;
+  height:18px;
 
 }
 
@@ -80,9 +108,17 @@ const username = "minetrio1256";
 
   margin-left:auto;
 
-  border:2px inset white;
+  height:30px;
 
-  padding:4px 12px;
+  min-width:80px;
+
+  box-sizing:border-box;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  border-style:inset;
 
 }
 

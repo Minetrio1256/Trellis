@@ -79,61 +79,86 @@ defineProps({
 <style scoped>
 
 .start-menu {
-  position: absolute;
-  bottom: 42px;
-  left: 2px;
 
-  width: 300px;
+  position:absolute;
 
-  display: flex;
-  flex-direction: row;
+  bottom:40px;
+  left:2px;
 
-  background: #c0c0c0;
 
-  padding: 0;
+  width:320px;
+  height:430px;
+
+
+  display:flex;
+
+  flex-direction:row;
+
+
+  background:#c0c0c0;
+
+  box-sizing:border-box;
+
+  padding:0;
+
+  z-index:999;
+
 }
 
-
 .brand {
-  width: 42px;
-  background: #000080;
 
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
+  width:42px;
+
+  flex-shrink:0;
+
+  background:#000080;
+
+  display:flex;
+
+  justify-content:center;
+
+  align-items:flex-end;
+
 }
 
 
 .brand span {
-  color: white;
 
-  writing-mode: vertical-rl;
-  transform: rotate(180deg);
+  color:white;
 
-  font-size: 24px;
-  font-weight: bold;
+  writing-mode:vertical-rl;
 
-  margin-bottom: 10px;
+  transform:rotate(180deg);
+
+
+  font-size:22px;
+
+  font-weight:bold;
+
+  letter-spacing:1px;
+
+  margin-bottom:10px;
+
 }
 
 
 .menu {
-  flex: 1;
-  padding: 4px;
+
+  flex:1;
+
+  display:flex;
+
+  flex-direction:column;
+
 }
 
 
 .menu-item {
-  height: 34px;
 
-  display: flex;
-  align-items: center;
+  height:34px;
 
-  gap: 8px;
+  flex-shrink:0;
 
-  padding: 0 8px;
-
-  cursor: default;
 }
 
 
