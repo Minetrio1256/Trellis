@@ -77,20 +77,13 @@ router.get("/callback", async (req, res) => {
     }
 });
 
-router.get("/me", async (req,res)=>{
-
-    const token = req.cookies.token;
-
-    if(!token){
-        return res.status(401).json({
-            authenticated:false
-        });
-    }
-
-    res.json({
-        authenticated:true
+router.get("/me", auth, async (req, res) => {
+    return res.json({
+        authenticated: true,
+        user: {
+            id: req.user.id
+        }
     });
-
 });
 
 
