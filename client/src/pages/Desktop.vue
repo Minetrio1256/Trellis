@@ -1,10 +1,12 @@
 <script setup>
 
 import { ref, onMounted, onUnmounted } from "vue";
+
 import StartMenu from "../components/StartMenu.vue";
+import ShutdownScreen from "../components/ShutdownScreen.vue";
 
 
-defineProps({
+const props = defineProps({
   user: {
     type: Object,
     required: true
@@ -14,6 +16,8 @@ defineProps({
 
 const open = ref(false);
 
+const shuttingDown = ref(false);
+
 const time = ref("");
 
 let clockInterval;
@@ -22,7 +26,6 @@ let clockInterval;
 function updateClock() {
 
   const now = new Date();
-
 
   time.value = now.toLocaleTimeString(
       [],
@@ -36,11 +39,14 @@ function updateClock() {
 }
 
 
+// Startup sound
+let startupPlayed = false;
 
-onMounted(() => {
+function playStartup() {
 
+  if (startupPlayed) return;
 
-  // Startup sound
+  startupPlayed = true;
 
   const audio = new Audio("/startup.wav");
 
@@ -51,9 +57,80 @@ onMounted(() => {
         console.log("Startup sound blocked:", err);
       });
 
+  window.removeEventListener(
+      "pointerdown",
+      playStartup
+  );
+
+}
 
 
-  // Clock
+// Win98 logoff sound
+function playLogoffSound() {
+
+  const audio = new Audio("/win98logoff.mp3");
+
+  audio.volume = 0.5;
+
+  return audio;
+
+}
+
+
+async function logoff() {
+
+  open.value = false;
+
+  const audio = playLogoffSound();
+
+  audio.play()
+      .catch(() => {});
+
+
+  await fetch(
+      "/api/auth/logout",
+      {
+        method: "POST",
+        credentials: "include"
+      }
+  );
+
+
+  audio.onended = () => {
+    location.reload();
+  };
+
+}
+
+
+function shutdown() {
+
+  open.value = false;
+
+  const audio = playLogoffSound();
+
+  audio.play()
+      .catch(() => {});
+
+
+  audio.onended = () => {
+    shuttingDown.value = true;
+  };
+
+}
+
+
+
+onMounted(() => {
+
+  window.addEventListener(
+      "pointerdown",
+      playStartup,
+      {
+        once: true
+      }
+  );
+
 
   updateClock();
 
@@ -63,7 +140,6 @@ onMounted(() => {
       1000
   );
 
-
 });
 
 
@@ -71,6 +147,11 @@ onMounted(() => {
 onUnmounted(() => {
 
   clearInterval(clockInterval);
+
+  window.removeEventListener(
+      "pointerdown",
+      playStartup
+  );
 
 });
 
@@ -80,12 +161,22 @@ onUnmounted(() => {
 
 <template>
 
-  <div class="desktop">
+  <ShutdownScreen
+      v-if="shuttingDown"
+  />
+
+
+  <div
+      v-else
+      class="desktop"
+  >
 
 
     <StartMenu
         v-if="open"
         :username="user?.username ?? 'User'"
+        @logoff="logoff"
+        @shutdown="shutdown"
     />
 
 
@@ -107,7 +198,6 @@ onUnmounted(() => {
       </button>
 
 
-
       <div class="clock">
         {{ time }}
       </div>
@@ -123,7 +213,6 @@ onUnmounted(() => {
 
 <style scoped>
 
-
 .desktop {
 
   width:100%;
@@ -136,11 +225,6 @@ onUnmounted(() => {
 }
 
 
-
-/*
-    Bottom taskbar
-*/
-
 .taskbar {
 
   position:fixed;
@@ -148,53 +232,37 @@ onUnmounted(() => {
   bottom:0;
   left:0;
 
-
   width:100%;
   height:40px;
 
-
   box-sizing:border-box;
-
 
   background:#c0c0c0;
 
-
   border-top:2px solid white;
-
 
   display:flex;
 
   align-items:center;
 
-
   padding:2px;
-
 
   z-index:1000;
 
 }
 
 
-
-/*
-    Start button
-*/
-
 .start-button {
 
   height:32px;
-
 
   display:flex;
 
   align-items:center;
 
-
   gap:5px;
 
-
   padding:2px 8px;
-
 
 }
 
@@ -207,11 +275,6 @@ onUnmounted(() => {
 }
 
 
-
-/*
-    Win98 pressed button effect
-*/
-
 .start-button.active {
 
   border-style:inset;
@@ -219,20 +282,13 @@ onUnmounted(() => {
 }
 
 
-
-/*
-    Clock
-*/
-
 .clock {
 
   margin-left:auto;
 
-
   height:30px;
 
   min-width:80px;
-
 
   display:flex;
 
@@ -240,17 +296,10 @@ onUnmounted(() => {
 
   align-items:center;
 
-
   border-style:inset;
-
 
   padding:0 8px;
 
-
-  box-sizing:border-box;
-
 }
-
-
 
 </style>

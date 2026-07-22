@@ -1,10 +1,17 @@
 <script setup>
+
 defineProps({
   username: {
     type: String,
     default: "User"
   }
 });
+
+const emit = defineEmits([
+  "logoff",
+  "shutdown"
+]);
+
 </script>
 
 
@@ -75,17 +82,25 @@ defineProps({
       <div class="bottom">
 
 
-        <div class="menu-item">
+        <div
+            class="menu-item"
+            @click="emit('logoff')"
+        >
           <img
               class="menu-icon"
               src="https://win98icons.alexmeub.com/icons/png/key_win-3.png"
           />
+
           Log Off {{ username }}...
         </div>
 
 
-        <div class="menu-item">
+        <div
+            class="menu-item"
+            @click="emit('shutdown')"
+        >
           <span>⏻</span>
+
           Shut Down...
         </div>
 
