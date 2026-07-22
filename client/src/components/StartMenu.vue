@@ -99,9 +99,14 @@ const emit = defineEmits([
             class="menu-item"
             @click="emit('shutdown')"
         >
-          <span>⏻</span>
+
+          <img
+              class="menu-icon"
+              src="https://win98icons.alexmeub.com/icons/png/shut_down_normal-2.png"
+          />
 
           Shut Down...
+
         </div>
 
 
@@ -260,7 +265,15 @@ const emit = defineEmits([
 
 .menu-item span {
 
-  width:22px;
+  width:28px;
+
+  height:28px;
+
+  display:flex;
+
+  justify-content:center;
+
+  align-items:center;
 
   text-align:center;
 
@@ -274,10 +287,12 @@ const emit = defineEmits([
 }
 
 .menu-icon {
-  width:22px;
-  height:22px;
+  width:28px;
+  height:28px;
 
   image-rendering:auto;
+
+  flex-shrink:0;
 }
 
 

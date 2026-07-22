@@ -119,7 +119,20 @@ function shutdown() {
 
 }
 
+function closeMenu(event) {
 
+  const menu = document.querySelector(".start-menu");
+  const button = document.querySelector(".start-button");
+
+  if (
+      menu &&
+      !menu.contains(event.target) &&
+      !button.contains(event.target)
+  ) {
+    open.value = false;
+  }
+
+}
 
 onMounted(() => {
 
@@ -140,6 +153,11 @@ onMounted(() => {
       1000
   );
 
+  window.addEventListener(
+      "click",
+      closeMenu
+  );
+
 });
 
 
@@ -151,6 +169,11 @@ onUnmounted(() => {
   window.removeEventListener(
       "pointerdown",
       playStartup
+  );
+
+  window.removeEventListener(
+      "click",
+      closeMenu
   );
 
 });
@@ -186,7 +209,7 @@ onUnmounted(() => {
       <button
           class="start-button"
           :class="{ active: open }"
-          @click="open = !open"
+          @click.stop="open = !open"
       >
 
         <img
