@@ -49,17 +49,16 @@ export async function getUser(accessToken) {
     return data;
 }
 
-export async function getDiscordUser(userId) {
+export async function getDiscordUser(accessToken) {
 
     const { data } = await axios.get(
-        `${API}/users/${userId}`,
+        `${API}/users/@me`,
         {
             headers: {
-                Authorization: `Bot ${env.DISCORD_TOKEN}`
+                Authorization: `Bearer ${accessToken}`
             }
         }
     );
-
 
     return data;
 }

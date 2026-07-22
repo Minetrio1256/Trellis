@@ -55,7 +55,8 @@ router.get("/callback", async (req, res) => {
         await saveSession(
             discordUser.id,
             tokenJWT,
-            new Date(decoded.exp * 1000)
+            new Date(decoded.exp * 1000),
+            token
         );
 
         res.cookie(
@@ -87,9 +88,8 @@ router.get("/me", auth, async (req, res) => {
     try {
 
         const discordUser = await getDiscordUser(
-            req.user.id
+            req.user.discord_access_token
         );
-
 
         return res.json({
             authenticated: true,
@@ -101,12 +101,9 @@ router.get("/me", auth, async (req, res) => {
             }
         });
 
-
     } catch (err) {
 
-        console.error(
-            err.response?.data ?? err
-        );
+        console.error(err.response?.data ?? err);
 
         return res.status(500).json({
             error: "Failed to fetch Discord user"

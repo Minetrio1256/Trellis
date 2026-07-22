@@ -11,24 +11,40 @@ export async function findUser(id) {
 }
 
 
-export async function saveSession(id, token, expire) {
+export async function saveSession(
+    id,
+    jwt,
+    expire,
+    oauth
+) {
     await query(
         `
-        INSERT INTO users(id, jwt, jwt_expire)
-        VALUES (?, ?, ?)
+            INSERT INTO users(
+                id,
+                jwt,
+                jwt_expire,
+                discord_access_token,
+                discord_refresh_token
+            )
+            VALUES (?, ?, ?, ?, ?)
 
-        ON DUPLICATE KEY UPDATE
-            jwt = VALUES(jwt),
-            jwt_expire = VALUES(jwt_expire)
+                ON DUPLICATE KEY UPDATE
+
+                                     jwt = VALUES(jwt),
+                                     jwt_expire = VALUES(jwt_expire),
+                                     discord_access_token = VALUES(discord_access_token),
+                                     discord_refresh_token = VALUES(discord_refresh_token)
+
         `,
         [
             id,
-            token,
-            expire
+            jwt,
+            expire,
+            oauth.access_token,
+            oauth.refresh_token
         ]
     );
 }
-
 
 export async function clearSession(id) {
     await query(
