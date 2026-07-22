@@ -85,7 +85,7 @@ onUnmounted(() => {
 
     <StartMenu
         v-if="open"
-        :username="user.username"
+        :username="user?.username ?? 'User'"
     />
 
 

@@ -32,6 +32,7 @@ onMounted(() => {
 
   <Desktop
       v-else
+      :user="auth.user"
   />
 
 </template>
