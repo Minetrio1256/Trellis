@@ -3,6 +3,7 @@ import express from "express";
 import {
     exchangeCode,
     getUser,
+    getDiscordUser,
     getGuildMember,
     getOAuthURL,
     hasRequiredRole
@@ -28,6 +29,8 @@ router.get("/callback", async (req, res) => {
         }
 
         const token = await exchangeCode(code);
+
+        console.log("OAuth token:", token);
 
         const discordUser = await getUser(token.access_token);
 
@@ -81,20 +84,35 @@ router.get("/callback", async (req, res) => {
 
 router.get("/me", auth, async (req, res) => {
 
-    const discordUser = await getUser(
-        req.user.accessToken
-    );
+    try {
+
+        const discordUser = await getDiscordUser(
+            req.user.id
+        );
 
 
-    return res.json({
-        authenticated: true,
-        user: {
-            id: discordUser.id,
-            username: discordUser.username,
-            global_name: discordUser.global_name,
-            avatar: discordUser.avatar
-        }
-    });
+        return res.json({
+            authenticated: true,
+            user: {
+                id: discordUser.id,
+                username: discordUser.username,
+                global_name: discordUser.global_name,
+                avatar: discordUser.avatar
+            }
+        });
+
+
+    } catch (err) {
+
+        console.error(
+            err.response?.data ?? err
+        );
+
+        return res.status(500).json({
+            error: "Failed to fetch Discord user"
+        });
+
+    }
 
 });
 

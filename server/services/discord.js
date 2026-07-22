@@ -49,6 +49,21 @@ export async function getUser(accessToken) {
     return data;
 }
 
+export async function getDiscordUser(userId) {
+
+    const { data } = await axios.get(
+        `${API}/users/${userId}`,
+        {
+            headers: {
+                Authorization: `Bot ${env.DISCORD_TOKEN}`
+            }
+        }
+    );
+
+
+    return data;
+}
+
 export async function getGuildMember(accessToken, userId) {
     const { data } = await axios.get(
         `${API}/users/@me/guilds/${env.DISCORD_GUILD_ID}/member`,
