@@ -32,45 +32,63 @@ const emit = defineEmits([
       <div class="menu">
 
         <div class="menu-item">
-          <span>📁</span>
+          <img
+              class="menu-icon"
+              src="https://win98icons.alexmeub.com/icons/png/appwizard-4.png"
+              alt="Programs"
+          />
           Programs
           <b>▶</b>
         </div>
 
-
         <div class="menu-item">
-          <span>⭐</span>
+          <img
+              class="menu-icon"
+              src="https://win98icons.alexmeub.com/icons/png/directory_favorites-2.png"
+              alt="Favorites"
+          />
           Favorites
           <b>▶</b>
         </div>
 
-
         <div class="menu-item">
-          <span>📄</span>
+          <img
+              class="menu-icon"
+              src="https://win98icons.alexmeub.com/icons/png/directory_open_file_mydocs-4.png"
+              alt="Documents"
+          />
           Documents
           <b>▶</b>
         </div>
 
-
         <div class="menu-item">
-          <span>⚙</span>
+          <img
+              class="menu-icon"
+              src="https://win98icons.alexmeub.com/icons/png/settings_gear-3.png"
+              alt="Settings"
+          />
           Settings
           <b>▶</b>
         </div>
 
-
         <div class="menu-item">
-          <span>🔍</span>
+          <img
+              class="menu-icon"
+              src="https://win98icons.alexmeub.com/icons/png/search_file-1.png"
+              alt="Find"
+          />
           Find
           <b>▶</b>
         </div>
 
-
         <div class="menu-item">
-          <span>❓</span>
+          <img
+              class="menu-icon"
+              src="https://win98icons.alexmeub.com/icons/png/help_book_cool-4.png"
+              alt="Help"
+          />
           Help
         </div>
-
 
       </div>
 
