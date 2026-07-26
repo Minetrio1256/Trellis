@@ -2,6 +2,9 @@ import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
 import authRouter from "./routes/auth.js";
+import boardsRouter from "./routes/boards.js";
+import groupsRouter from "./routes/groups.js";
+import usersRouter from "./routes/users.js";
 import cookieParser from "cookie-parser";
 
 import env from "./config/env.js";
@@ -13,6 +16,9 @@ app.use(express.json());
 app.use(cookieParser());
 
 app.use("/api/auth", authRouter);
+app.use("/api/boards", boardsRouter);
+app.use("/api/groups", groupsRouter);
+app.use("/api/users", usersRouter);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

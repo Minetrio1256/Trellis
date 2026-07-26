@@ -137,4 +137,4 @@ router.delete(
     }
 );
 
-export default router;
+export default groupsRouter;
