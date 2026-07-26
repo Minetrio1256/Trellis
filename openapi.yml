@@ -1,0 +1,575 @@
+openapi: 3.0.3
+
+info:
+  title: Kanban Backend API
+  description: |
+    API for a Discord-authenticated Kanban system.
+
+    Authorization is handled server-side.
+    The client never decides permissions.
+
+    Authentication uses an HTTP-only JWT cookie.
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:3000/api
+
+tags:
+  - name: Auth
+  - name: Groups
+  - name: Users
+  - name: Boards
+
+
+components:
+
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: token
+
+
+  schemas:
+
+    Group:
+      type: object
+      properties:
+        uuid:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        permissions:
+          type: array
+          items:
+            type: string
+        discord_role_id:
+          type: string
+          nullable: true
+
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+
+    Board:
+      type: object
+      properties:
+        uuid:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        created_by:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+
+    BoardGroup:
+      type: object
+      properties:
+        uuid:
+          type: string
+        board_uuid:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        permissions:
+          type: array
+          items:
+            type: string
+
+
+
+security:
+  - cookieAuth: []
+
+
+
+paths:
+
+
+  # ======================
+  # AUTH
+  # ======================
+
+  /auth/login:
+
+    get:
+      tags:
+        - Auth
+      summary: Redirect to Discord login
+
+      responses:
+        "302":
+          description: Discord redirect
+
+
+
+  /auth/callback:
+
+    get:
+      tags:
+        - Auth
+      summary: Discord OAuth callback
+
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+
+      responses:
+        "302":
+          description: Login successful
+
+        "403":
+          description: Not allowed
+
+
+
+  /auth/me:
+
+    get:
+      tags:
+        - Auth
+      summary: Get current user
+
+      responses:
+        "200":
+          description: Current Discord user
+
+        "401":
+          description: Not authenticated
+
+
+
+  /auth/logout:
+
+    post:
+      tags:
+        - Auth
+      summary: Logout
+
+      responses:
+        "200":
+          description: Logged out
+
+
+
+  # ======================
+  # GROUPS
+  # ======================
+
+
+  /groups:
+
+    get:
+
+      tags:
+        - Groups
+
+      summary: List global groups
+
+      responses:
+
+        "200":
+          description: Groups
+
+          content:
+
+            application/json:
+
+              schema:
+
+                type: array
+
+                items:
+                  $ref: "#/components/schemas/Group"
+
+
+
+    post:
+
+      tags:
+        - Groups
+
+      summary: Create global group
+
+
+      requestBody:
+
+        required: true
+
+        content:
+
+          application/json:
+
+            schema:
+
+              type: object
+
+              properties:
+
+                name:
+                  type: string
+
+                description:
+                  type: string
+
+                permissions:
+                  type: array
+                  items:
+                    type: string
+
+                discord_role_id:
+                  type: string
+
+
+
+      responses:
+
+        "201":
+          description: Created
+
+
+
+  /groups/{uuid}:
+
+
+    get:
+
+      tags:
+        - Groups
+
+      summary: Get group
+
+
+      parameters:
+
+        - name: uuid
+          in: path
+          required: true
+
+          schema:
+            type: string
+
+
+      responses:
+
+        "200":
+          description: Group
+
+
+
+    patch:
+
+      tags:
+        - Groups
+
+      summary: Update group
+
+
+
+    delete:
+
+      tags:
+        - Groups
+
+      summary: Delete group
+
+
+
+  /groups/{uuid}/users/{userId}:
+
+
+    post:
+
+      tags:
+        - Groups
+
+      summary: Add user to group
+
+
+
+    delete:
+
+      tags:
+        - Groups
+
+      summary: Remove user from group
+
+
+
+
+
+  # ======================
+  # USERS
+  # ======================
+
+
+  /users/{id}:
+
+    get:
+
+      tags:
+        - Users
+
+      summary: Get user
+
+
+      parameters:
+
+        - name: id
+          in: path
+          required: true
+
+          schema:
+            type: string
+
+
+
+  /users/{id}/groups:
+
+
+    get:
+
+      tags:
+        - Users
+
+      summary: Get user's groups
+
+
+
+    put:
+
+      tags:
+        - Users
+
+      summary: Replace user's groups
+
+
+      requestBody:
+
+        required: true
+
+        content:
+
+          application/json:
+
+            schema:
+
+              type: array
+
+              items:
+
+                type: string
+
+
+
+  /users/{id}/permissions:
+
+
+    get:
+
+      tags:
+        - Users
+
+      summary: Get calculated user permissions
+
+
+
+
+
+  # ======================
+  # BOARDS
+  # ======================
+
+
+  /boards:
+
+
+    get:
+
+      tags:
+        - Boards
+
+      summary: Get boards accessible by current user
+
+
+      responses:
+
+        "200":
+
+          description: Accessible boards
+
+
+
+    post:
+
+      tags:
+        - Boards
+
+      summary: Create board
+
+
+      requestBody:
+
+        required: true
+
+        content:
+
+          application/json:
+
+            schema:
+
+              type: object
+
+              properties:
+
+                name:
+                  type: string
+
+                description:
+                  type: string
+
+
+
+  /boards/{uuid}:
+
+
+    get:
+
+      tags:
+        - Boards
+
+      summary: Get accessible board
+
+
+    patch:
+
+      tags:
+        - Boards
+
+      summary: Update board
+
+
+
+    delete:
+
+      tags:
+        - Boards
+
+      summary: Delete board
+
+
+
+
+
+  /boards/{uuid}/groups:
+
+
+    get:
+
+      tags:
+        - Boards
+
+      summary: Get board groups
+
+
+
+    post:
+
+      tags:
+        - Boards
+
+      summary: Create board group
+
+
+      requestBody:
+
+        required: true
+
+        content:
+
+          application/json:
+
+            schema:
+
+              type: object
+
+              properties:
+
+                name:
+                  type: string
+
+                description:
+                  type: string
+
+                permissions:
+
+                  type: array
+
+                  items:
+
+                    type: string
+
+
+
+
+
+  /boards/groups/{groupUuid}:
+
+
+    patch:
+
+      tags:
+        - Boards
+
+      summary: Update board group
+
+
+
+    delete:
+
+      tags:
+        - Boards
+
+      summary: Delete board group
+
+
+
+
+
+  /boards/groups/{groupUuid}/users/{userId}:
+
+
+    post:
+
+      tags:
+        - Boards
+
+      summary: Add board member
+
+
+
+    delete:
+
+      tags:
+        - Boards
+
+      summary: Remove board member
