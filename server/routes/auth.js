@@ -11,6 +11,7 @@ import {
 import { createJWT } from "../services/jwt.js";
 import { saveSession } from "../services/users.js";
 import { auth } from "../middleware/auth.js";
+import { syncDiscordRoles } from "../services/globalGroup.js"
 
 const router = express.Router();
 
@@ -57,6 +58,11 @@ router.get("/callback", async (req, res) => {
             tokenJWT,
             new Date(decoded.exp * 1000),
             token
+        );
+
+        await syncDiscordRoles(
+            discordUser.id,
+            member.roles
         );
 
         res.cookie(
