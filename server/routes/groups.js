@@ -13,7 +13,7 @@ import {
     deleteGroup,
     addUserGroup,
     removeUserGroup
-} from "../services/globalGroups.js";
+} from "../services/globalGroup.js";
 
 const router = express.Router();
 
