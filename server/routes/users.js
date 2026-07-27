@@ -52,10 +52,16 @@ router.put(
     permission(Permission.GROUP_EDIT),
     async (req, res) => {
 
+        const targetUserId = req.params.id;
+
         await setUserGroups(
-            req.params.id,
+            targetUserId,
             req.body
         );
+
+        if (req.user && (req.user.id === targetUserId || req.user.uuid === targetUserId)) {
+            req.user.permissions = await getUserPermissions(targetUserId);
+        }
 
         res.sendStatus(204);
 
