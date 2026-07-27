@@ -1,7 +1,7 @@
 import express from "express";
 
 import { auth } from "../middleware/auth.js";
-import permission from "../middleware/permission.js";
+import permission from "../services/permission.js";
 import Permission from "../permissions.js";
 
 import {
