@@ -75,4 +75,6 @@ router.get(
     }
 );
 
+const usersRouter = router;
+
 export default usersRouter;

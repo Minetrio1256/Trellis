@@ -277,5 +277,6 @@ router.delete(
     }
 );
 
+const boardsRouter = router()
 
 export default boardsRouter;

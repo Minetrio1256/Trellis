@@ -137,4 +137,6 @@ router.delete(
     }
 );
 
+const groupsRouter = router;
+
 export default groupsRouter;
