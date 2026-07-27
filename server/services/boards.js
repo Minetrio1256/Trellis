@@ -216,3 +216,34 @@ export async function getBoardPermissions(userId, boardUUID) {
 
     return [...permissions];
 }
+
+export async function getAccessibleBoard(userId, uuid) {
+    const board = await getBoardByUUID(uuid);
+    if (!board) return null;
+
+    const permissions = await getBoardPermissions(userId, uuid);
+    // Adjust permission logic depending on how your app handles ownership/access
+    return { ...board, permissions };
+}
+
+export async function getAccessibleBoards(userId) {
+    const boards = await getBoards();
+    const accessibleBoards = [];
+
+    for (const board of boards) {
+        const permissions = await getBoardPermissions(userId, board.uuid);
+        // If the user has any permissions or access to the board, include it
+        if (permissions && permissions.length > 0) {
+            accessibleBoards.push({ ...board, permissions });
+        }
+    }
+
+    return accessibleBoards;
+}
+
+export async function getBoardGroupsForUser(userId, boardUUID) {
+    const board = await getAccessibleBoard(userId, boardUUID);
+    if (!board) return null;
+
+    return await getBoardGroups(boardUUID);
+}
