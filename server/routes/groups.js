@@ -17,15 +17,6 @@ import {
 
 const router = express.Router();
 
-export function permission(requiredPermission) {
-    return async (req, res, next) => {
-        if (!hasPermission(req.user, requiredPermission)) {
-            return res.sendStatus(403);
-        }
-        next();
-    };
-}
-
 router.get(
     "/",
     auth,

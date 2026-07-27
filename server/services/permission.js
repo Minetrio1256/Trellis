@@ -81,3 +81,12 @@ export function hasBoardPermission(
         boardPermissions.includes(permission)
     );
 }
+
+export function permission(requiredPermission) {
+    return async (req, res, next) => {
+        if (!hasPermission(req.user, requiredPermission)) {
+            return res.sendStatus(403);
+        }
+        next();
+    };
+}
