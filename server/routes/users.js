@@ -12,7 +12,7 @@ import {
     getUserGroups,
     getUserPermissions,
     setUserGroups
-} from "../services/globalGroups.js";
+} from "../services/globalGroup.js";
 
 const router = express.Router();
 
