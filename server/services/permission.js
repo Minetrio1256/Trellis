@@ -1,4 +1,4 @@
-import Permission from "../permissions.js";
+import * as Permission from "../permissions.js";
 
 /**
  * Checks if a user has a global permission.
