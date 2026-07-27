@@ -2,7 +2,7 @@ import express from "express";
 import { v4 as uuid } from "uuid";
 
 import { auth } from "../middleware/auth.js";
-import permission from "../services/permission.js";
+import { hasPermission } from "../services/permission.js";
 import Permission from "../permissions.js";
 
 import {
@@ -16,6 +16,15 @@ import {
 } from "../services/globalGroup.js";
 
 const router = express.Router();
+
+export function permission(requiredPermission) {
+    return async (req, res, next) => {
+        if (!hasPermission(req.user, requiredPermission)) {
+            return res.sendStatus(403);
+        }
+        next();
+    };
+}
 
 router.get(
     "/",
