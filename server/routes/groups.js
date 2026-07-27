@@ -15,6 +15,15 @@ import {
     removeUserGroup
 } from "../services/globalGroup.js";
 
+function permission(requiredPermission) {
+    return async (req, res, next) => {
+        if (!hasPermission(req.user, requiredPermission)) {
+            return res.sendStatus(403);
+        }
+        next();
+    };
+}
+
 const router = express.Router();
 
 router.get(
