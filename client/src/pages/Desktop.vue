@@ -4,84 +4,84 @@ import { ref, onMounted, onUnmounted } from "vue";
 
 import StartMenu from "../components/StartMenu.vue";
 import ShutdownScreen from "../components/ShutdownScreen.vue";
+import Taskbar from "../components/Taskbar.vue";
+import DesktopWindow from "../components/DesktopWindow.vue";
+
+import UserManager from "../components/UserManager.vue";
+import GroupManager from "../components/GroupManager.vue";
+
+import { useDesktopStore } from "../stores/desktop";
 
 
 const props = defineProps({
+
   user: {
+
     type: Object,
+
     required: true
+
   }
+
 });
 
 
-const open = ref(false);
+const desktop = useDesktopStore();
+
+
+const startOpen = ref(false);
 
 const shuttingDown = ref(false);
 
-const time = ref("");
-
-let clockInterval;
 
 
-function updateClock() {
-
-  const now = new Date();
-
-  time.value = now.toLocaleTimeString(
-      [],
-      {
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true
-      }
-  );
-
-}
-
-
-// Startup sound
 let startupPlayed = false;
+
+
 
 function playStartup() {
 
-  if (startupPlayed) return;
+  if (startupPlayed)
+    return;
+
 
   startupPlayed = true;
+
 
   const audio = new Audio("/startup.wav");
 
   audio.volume = 0.5;
 
-  audio.play()
-      .catch(err => {
-        console.log("Startup sound blocked:", err);
-      });
 
-  window.removeEventListener(
-      "pointerdown",
-      playStartup
-  );
+  audio.play()
+      .catch(() => {});
+
 
 }
 
 
-// Win98 logoff sound
+
 function playLogoffSound() {
 
   const audio = new Audio("/win98logoff.mp3");
 
   audio.volume = 0.5;
 
+
   return audio;
 
 }
 
 
+
 async function logoff() {
 
-  open.value = false;
+
+  startOpen.value = false;
+
 
   const audio = playLogoffSound();
+
 
   audio.play()
       .catch(() => {});
@@ -90,73 +90,110 @@ async function logoff() {
   await fetch(
       "/api/auth/logout",
       {
-        method: "POST",
-        credentials: "include"
+        method:"POST",
+        credentials:"include"
       }
   );
 
 
   audio.onended = () => {
+
     location.reload();
+
   };
+
 
 }
 
 
+
 function shutdown() {
 
-  open.value = false;
+
+  startOpen.value = false;
+
 
   const audio = playLogoffSound();
+
 
   audio.play()
       .catch(() => {});
 
 
   audio.onended = () => {
+
     shuttingDown.value = true;
+
   };
 
+
 }
+
+
 
 function closeMenu(event) {
 
+
   const menu = document.querySelector(".start-menu");
+
   const button = document.querySelector(".start-button");
 
+
   if (
+
       menu &&
       !menu.contains(event.target) &&
+      button &&
       !button.contains(event.target)
+
   ) {
-    open.value = false;
+
+    startOpen.value = false;
+
   }
+
 
 }
 
+
+
+function updateWindowPosition(id, position) {
+
+
+  const window = desktop.windows.find(
+      w => w.id === id
+  );
+
+
+  if (!window)
+    return;
+
+
+  window.x = position.x;
+  window.y = position.y;
+
+
+}
+
+
+
 onMounted(() => {
+
 
   window.addEventListener(
       "pointerdown",
       playStartup,
       {
-        once: true
+        once:true
       }
   );
 
-
-  updateClock();
-
-
-  clockInterval = setInterval(
-      updateClock,
-      1000
-  );
 
   window.addEventListener(
       "click",
       closeMenu
   );
+
 
 });
 
@@ -164,17 +201,18 @@ onMounted(() => {
 
 onUnmounted(() => {
 
-  clearInterval(clockInterval);
 
   window.removeEventListener(
       "pointerdown",
       playStartup
   );
 
+
   window.removeEventListener(
       "click",
       closeMenu
   );
+
 
 });
 
@@ -184,9 +222,11 @@ onUnmounted(() => {
 
 <template>
 
+
   <ShutdownScreen
       v-if="shuttingDown"
   />
+
 
 
   <div
@@ -196,133 +236,118 @@ onUnmounted(() => {
 
 
     <StartMenu
-        v-if="open"
-        :username="user?.username ?? 'User'"
+
+        v-if="startOpen"
+
+        :username="props.user?.username ?? 'User'"
+
         @logoff="logoff"
+
         @shutdown="shutdown"
+
     />
 
 
-    <div class="taskbar">
+
+    <!-- APPLICATION WINDOWS -->
 
 
-      <button
-          class="start-button"
-          :class="{ active: open }"
-          @click.stop="open = !open"
-      >
+    <DesktopWindow
 
-        <img
-            src="https://win98icons.alexmeub.com/icons/png/windows-0.png"
-        />
+        v-for="window in desktop.windows"
 
-        <b>Start</b>
+        :key="window.id"
 
-      </button>
+        v-show="!window.minimized"
+
+        :title="window.title"
+
+        :icon="window.icon"
+
+        :x="window.x"
+
+        :y="window.y"
+
+        :width="window.width"
+
+        :z="window.z"
+
+        status="Ready"
 
 
-      <div class="clock">
-        {{ time }}
-      </div>
+        @focus="desktop.activate(window.id)"
 
 
-    </div>
+        @close="desktop.close(window.id)"
+
+
+        @minimize="desktop.minimize(window.id)"
+
+
+        @update:position="
+            position => updateWindowPosition(
+                window.id,
+                position
+            )
+        "
+
+    >
+
+
+      <UserManager
+
+          v-if="window.id === 'users'"
+
+      />
+
+
+
+      <GroupManager
+
+          v-else-if="window.id === 'groups'"
+
+      />
+
+
+    </DesktopWindow>
+
+
+
+    <Taskbar
+
+        :start-open="startOpen"
+
+        @start="startOpen = !startOpen"
+
+    />
 
 
   </div>
+
 
 </template>
 
 
 <style scoped>
 
+
 .desktop {
 
   width:100%;
+
   height:100vh;
+
 
   background:#008080;
 
+
   overflow:hidden;
 
-}
 
-
-.taskbar {
-
-  position:fixed;
-
-  bottom:0;
-  left:0;
-
-  width:100%;
-  height:40px;
-
-  box-sizing:border-box;
-
-  background:#c0c0c0;
-
-  border-top:2px solid white;
-
-  display:flex;
-
-  align-items:center;
-
-  padding:2px;
-
-  z-index:1000;
+  position:relative;
 
 }
 
 
-.start-button {
-
-  height:32px;
-
-  display:flex;
-
-  align-items:center;
-
-  gap:5px;
-
-  padding:2px 8px;
-
-}
-
-
-.start-button img {
-
-  width:18px;
-  height:18px;
-
-}
-
-
-.start-button.active {
-
-  border-style:inset;
-
-}
-
-
-.clock {
-
-  margin-left:auto;
-
-  height:30px;
-
-  min-width:80px;
-
-  display:flex;
-
-  justify-content:center;
-
-  align-items:center;
-
-  border-style:inset;
-
-  padding:0 8px;
-
-}
 
 </style>
