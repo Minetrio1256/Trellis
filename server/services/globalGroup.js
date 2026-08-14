@@ -106,8 +106,8 @@ export async function getUserGroups(userId) {
     return await query(`
         SELECT gg.*
         FROM user_groups ug
-        JOIN global_groups gg
-            ON gg.uuid = ug.group_uuid
+                 JOIN global_groups gg
+                      ON gg.uuid = ug.group_uuid
         WHERE ug.user_id = ?
         ORDER BY gg.name
     `, [userId]);
@@ -152,37 +152,47 @@ export async function setUserGroups(userId, groupUUIDs) {
     }
 }
 
+/*
+ * User Permissions
+ *
+ * Collects all permissions from all global groups
+ * assigned to the user.
+ */
 export async function getUserPermissions(userId) {
+    if (!userId) {
+        return [];
+    }
 
     const groups = await getUserGroups(userId);
 
     const permissions = new Set();
 
     for (const group of groups) {
-
-        const perms = JSON.parse(group.permissions);
+        const perms = Array.isArray(group.permissions)
+            ? group.permissions
+            : JSON.parse(group.permissions);
 
         for (const permission of perms) {
             permissions.add(permission);
         }
-
     }
 
     return [...permissions];
 }
 
-export async function syncDiscordRoles(userId, discordRoleIds) {
+/*
+ * Discord Role Synchronization
+ */
 
+export async function syncDiscordRoles(userId, discordRoleIds) {
     const groups = [];
 
     for (const roleId of discordRoleIds) {
-
         const group = await getGroupByDiscordRole(roleId);
 
         if (group) {
             groups.push(group.uuid);
         }
-
     }
 
     await setUserGroups(userId, groups);

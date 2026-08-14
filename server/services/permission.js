@@ -1,108 +1,14 @@
 import Permission from "../permissions.js";
+
+import {
+    getUserPermissions
+} from "./globalGroup.js";
+
 import { query } from "../config/db.js";
 
-/**
- * Safely parse a group's permissions JSON.
- *
- * Expected database format:
- *
- * [
- *   "administrator",
- *   "board.create",
- *   "board.delete"
- * ]
+/*
+ * Global Permissions
  */
-function parsePermissions(value) {
-    if (!value) {
-        return [];
-    }
-
-    try {
-        const parsed = typeof value === "string"
-            ? JSON.parse(value)
-            : value;
-
-        if (!Array.isArray(parsed)) {
-            return [];
-        }
-
-        return parsed;
-    } catch (error) {
-        console.error("Failed to parse permissions:", error);
-        return [];
-    }
-}
-
-/**
- * Get all global permissions for a user from the database.
- */
-export async function getUserPermissions(userId) {
-    if (!userId) {
-        return [];
-    }
-
-    const rows = await query(`
-        SELECT gg.permissions
-        FROM user_groups ug
-        INNER JOIN global_groups gg
-            ON gg.uuid = ug.group_uuid
-        WHERE ug.user_id = ?
-    `, [userId]);
-
-    const permissions = new Set();
-
-    for (const row of rows) {
-        for (const permission of parsePermissions(row.permissions)) {
-            permissions.add(permission);
-        }
-    }
-
-    return [...permissions];
-}
-
-/**
- * Get all permissions a user has on a specific board.
- *
- * This includes:
- *
- * 1. Global group permissions
- * 2. Board group permissions
- */
-export async function getBoardPermissions(userId, boardUuid) {
-    if (!userId || !boardUuid) {
-        return [];
-    }
-
-    const rows = await query(`
-        SELECT permissions
-        FROM (
-            SELECT gg.permissions
-            FROM user_groups ug
-            INNER JOIN global_groups gg
-                ON gg.uuid = ug.group_uuid
-            WHERE ug.user_id = ?
-
-            UNION ALL
-
-            SELECT bg.permissions
-            FROM board_group_members bgm
-            INNER JOIN board_groups bg
-                ON bg.uuid = bgm.board_group_uuid
-            WHERE bgm.user_id = ?
-              AND bg.board_uuid = ?
-        ) AS permission_groups
-    `, [userId, userId, boardUuid]);
-
-    const permissions = new Set();
-
-    for (const row of rows) {
-        for (const permission of parsePermissions(row.permissions)) {
-            permissions.add(permission);
-        }
-    }
-
-    return [...permissions];
-}
 
 /**
  * Checks if a user has a global permission.
@@ -165,10 +71,56 @@ export async function hasAnyPermission(user, requiredPermissions) {
     );
 }
 
+/*
+ * Board Permissions
+ */
+
+/**
+ * Gets all permissions a user has on a specific board.
+ *
+ * Includes:
+ *
+ * - Global group permissions
+ * - Board group permissions
+ */
+export async function getBoardPermissions(userId, boardUuid) {
+    if (!userId || !boardUuid) {
+        return [];
+    }
+
+    const globalPermissions = await getUserPermissions(userId);
+
+    const boardGroups = await query(`
+        SELECT bg.permissions
+        FROM board_group_members bgm
+        INNER JOIN board_groups bg
+            ON bg.uuid = bgm.board_group_uuid
+        WHERE bgm.user_id = ?
+          AND bg.board_uuid = ?
+    `, [
+        userId,
+        boardUuid
+    ]);
+
+    const permissions = new Set(globalPermissions);
+
+    for (const group of boardGroups) {
+        const groupPermissions = Array.isArray(group.permissions)
+            ? group.permissions
+            : JSON.parse(group.permissions);
+
+        for (const permission of groupPermissions) {
+            permissions.add(permission);
+        }
+    }
+
+    return [...permissions];
+}
+
 /**
  * Checks permissions on a specific board.
  *
- * Global permissions + board-specific permissions.
+ * Global permissions extend to board permissions.
  *
  * Administrator always succeeds.
  */
@@ -193,8 +145,21 @@ export async function hasBoardPermission(
     return permissions.includes(permission);
 }
 
+/*
+ * Middleware
+ */
+
 /**
  * Global permission middleware.
+ *
+ * Usage:
+ *
+ * router.get(
+ *     "/users",
+ *     auth,
+ *     permission(Permission.USER_VIEW),
+ *     handler
+ * );
  */
 export function permission(requiredPermission) {
     return async (req, res, next) => {
@@ -223,9 +188,9 @@ export function permission(requiredPermission) {
 /**
  * Board permission middleware.
  *
- * Expects the board UUID to be in:
+ * Expects:
  *
- * req.params.boardUuid
+ * /boards/:boardUuid/...
  */
 export function boardPermission(requiredPermission) {
     return async (req, res, next) => {
@@ -252,7 +217,11 @@ export function boardPermission(requiredPermission) {
 
             next();
         } catch (error) {
-            console.error("Board permission check failed:", error);
+            console.error(
+                "Board permission check failed:",
+                error
+            );
+
             return res.sendStatus(500);
         }
     };
