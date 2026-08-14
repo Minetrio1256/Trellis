@@ -6,6 +6,8 @@ import Permission from "../permissions.js";
 
 const groups = ref([]);
 
+const users = ref([]);
+
 const selected = ref(null);
 
 const editing = ref(false);
@@ -13,6 +15,8 @@ const editing = ref(false);
 const creating = ref(false);
 
 const loading = ref(false);
+
+const loadingUsers = ref(false);
 
 const error = ref("");
 
@@ -29,18 +33,45 @@ const form = ref({
 
 const selectedPermission = ref("");
 
+const selectedUser = ref("");
+
 
 /*
- * Permissions available from permissions.js
+ * Permissions available from permissions.js.
  *
- * Already-selected permissions are removed
+ * Already assigned permissions are removed
  * from the dropdown.
  */
+
 const availablePermissions = computed(() => {
 
   return Object.values(Permission).filter(
       permission =>
           !form.value.permissions.includes(permission)
+  );
+
+});
+
+
+/*
+ * Users who are not currently members
+ * of the selected group.
+ */
+
+const availableUsers = computed(() => {
+
+  if (!selected.value)
+    return users.value;
+
+  const memberIds = new Set(
+      selected.value.members?.map(
+          member => String(member.id)
+      ) ?? []
+  );
+
+  return users.value.filter(
+      user =>
+          !memberIds.has(String(user.id))
   );
 
 });
@@ -95,13 +126,15 @@ async function loadGroups() {
 
     }
 
-    groups.value = await res.json();
+    groups.value =
+        await res.json();
 
   }
 
   catch (err) {
 
-    error.value = err.message;
+    error.value =
+        err.message;
 
   }
 
@@ -115,7 +148,50 @@ async function loadGroups() {
 
 
 /*
- * Select group
+ * Load users
+ */
+
+async function loadUsers() {
+
+  loadingUsers.value = true;
+
+  try {
+
+    const res = await api(
+        "/api/users"
+    );
+
+    if (!res.ok) {
+
+      throw new Error(
+          "Failed loading users"
+      );
+
+    }
+
+    users.value =
+        await res.json();
+
+  }
+
+  catch (err) {
+
+    error.value =
+        err.message;
+
+  }
+
+  finally {
+
+    loadingUsers.value = false;
+
+  }
+
+}
+
+
+/*
+ * Load a group.
  */
 
 async function selectGroup(group) {
@@ -135,7 +211,8 @@ async function selectGroup(group) {
 
   }
 
-  selected.value = await res.json();
+  selected.value =
+      await res.json();
 
   form.value = {
 
@@ -156,6 +233,8 @@ async function selectGroup(group) {
 
   selectedPermission.value = "";
 
+  selectedUser.value = "";
+
   editing.value = true;
 
   creating.value = false;
@@ -164,7 +243,7 @@ async function selectGroup(group) {
 
 
 /*
- * New group
+ * Create a new group.
  */
 
 function newGroup() {
@@ -185,6 +264,8 @@ function newGroup() {
 
   selectedPermission.value = "";
 
+  selectedUser.value = "";
+
   creating.value = true;
 
   editing.value = true;
@@ -193,7 +274,7 @@ function newGroup() {
 
 
 /*
- * Add selected permission
+ * Add permission.
  */
 
 function addPermission() {
@@ -222,7 +303,7 @@ function addPermission() {
 
 
 /*
- * Remove permission
+ * Remove permission.
  */
 
 function removePermission(permission) {
@@ -236,7 +317,131 @@ function removePermission(permission) {
 
 
 /*
- * Save group
+ * Add user to group.
+ */
+
+async function addUser() {
+
+  if (!selected.value)
+    return;
+
+  if (!selectedUser.value)
+    return;
+
+  error.value = "";
+
+  const userId =
+      selectedUser.value;
+
+  const res = await api(
+
+      `/api/groups/${selected.value.uuid}/users/${userId}`,
+
+      {
+
+        method: "POST"
+
+      }
+
+  );
+
+  if (!res.ok) {
+
+    error.value =
+        "Failed adding user to group";
+
+    return;
+
+  }
+
+  selectedUser.value = "";
+
+  await selectGroup(selected.value);
+
+}
+
+
+/*
+ * Remove user from group.
+ */
+
+async function removeUser(user) {
+
+  if (!selected.value)
+    return;
+
+  if (
+      !confirm(
+          `Remove ${getUserName(user)} from this group?`
+      )
+  ) {
+
+    return;
+
+  }
+
+  error.value = "";
+
+  const res = await api(
+
+      `/api/groups/${selected.value.uuid}/users/${user.id}`,
+
+      {
+
+        method: "DELETE"
+
+      }
+
+  );
+
+  if (!res.ok) {
+
+    error.value =
+        "Failed removing user from group";
+
+    return;
+
+  }
+
+  await selectGroup(selected.value);
+
+}
+
+
+/*
+ * User display helpers.
+ *
+ * Adjust these if your user API exposes
+ * a different display-name field.
+ */
+
+function getUserName(user) {
+
+  return (
+      user.username ??
+      user.name ??
+      user.global_name ??
+      user.id
+  );
+
+}
+
+
+function getUserDisplay(user) {
+
+  const name =
+      getUserName(user);
+
+  if (name === String(user.id))
+    return name;
+
+  return `${name} (${user.id})`;
+
+}
+
+
+/*
+ * Save group.
  */
 
 async function saveGroup() {
@@ -303,13 +508,15 @@ async function saveGroup() {
 
   selectedPermission.value = "";
 
+  selectedUser.value = "";
+
   await loadGroups();
 
 }
 
 
 /*
- * Delete group
+ * Delete group.
  */
 
 async function deleteGroup() {
@@ -360,18 +567,26 @@ async function deleteGroup() {
 
   selectedPermission.value = "";
 
+  selectedUser.value = "";
+
   await loadGroups();
 
 }
 
 
 /*
- * Initial load
+ * Initial load.
  */
 
-onMounted(() => {
+onMounted(async () => {
 
-  loadGroups();
+  await Promise.all([
+
+    loadGroups(),
+
+    loadUsers()
+
+  ]);
 
 });
 
@@ -498,7 +713,9 @@ onMounted(() => {
             >
 
               <option value="">
+
                 Select permission...
+
               </option>
 
 
@@ -526,8 +743,6 @@ onMounted(() => {
 
           </div>
 
-
-          <!-- SELECTED PERMISSIONS -->
 
           <div class="selected-permissions">
 
@@ -576,6 +791,121 @@ onMounted(() => {
                   ? ""
                   : "s"
             }}
+
+          </div>
+
+
+          <!-- MEMBERS -->
+
+          <label>
+            Members
+          </label>
+
+
+          <div
+              v-if="selected && !creating"
+              class="members-section"
+          >
+
+            <!-- ADD USER -->
+
+            <div class="member-add">
+
+              <select
+                  v-model="selectedUser"
+                  class="user-select"
+                  :disabled="loadingUsers"
+              >
+
+                <option value="">
+
+                  {{
+                    loadingUsers
+                        ? "Loading users..."
+                        : "Select user..."
+                  }}
+
+                </option>
+
+
+                <option
+                    v-for="user in availableUsers"
+                    :key="user.id"
+                    :value="user.id"
+                >
+
+                  {{ getUserDisplay(user) }}
+
+                </option>
+
+              </select>
+
+
+              <button
+                  type="button"
+                  :disabled="!selectedUser"
+                  @click="addUser"
+              >
+
+                Add
+
+              </button>
+
+            </div>
+
+
+            <!-- CURRENT MEMBERS -->
+
+            <div class="members-list">
+
+              <div
+                  v-for="user in (selected.members ?? [])"
+                  :key="user.id"
+                  class="member-item"
+              >
+
+                <span>
+
+                  {{ getUserDisplay(user) }}
+
+                </span>
+
+
+                <button
+                    type="button"
+                    @click="removeUser(user)"
+                >
+
+                  Remove
+
+                </button>
+
+              </div>
+
+
+              <div
+                  v-if="
+                    !selected.members ||
+                    selected.members.length === 0
+                  "
+                  class="no-members"
+              >
+
+                No users in this group.
+
+              </div>
+
+            </div>
+
+          </div>
+
+
+          <div
+              v-else-if="creating"
+              class="new-group-members"
+          >
+
+            Save the group first to add members.
 
           </div>
 
@@ -756,13 +1086,6 @@ textarea {
 
 /*
  * Permission selector
- *
- * This is intentionally a native select.
- *
- * The Win98 CSS/browser handles:
- * - dropdown arrow
- * - scrollbar
- * - dropdown appearance
  */
 
 .permission-selector {
@@ -791,9 +1114,6 @@ textarea {
 
 /*
  * Selected permissions
- *
- * Kept below the selector so nothing overlays
- * the rest of the editor.
  */
 
 .selected-permissions {
@@ -806,7 +1126,7 @@ textarea {
 
   min-height: 30px;
 
-  max-height: 130px;
+  max-height: 100px;
 
   overflow-y: auto;
 
@@ -872,14 +1192,125 @@ textarea {
 }
 
 
+/*
+ * Members
+ */
+
+.members-section {
+
+  margin-bottom: 10px;
+
+}
+
+
+.member-add {
+
+  display: flex;
+
+  gap: 4px;
+
+  margin-bottom: 6px;
+
+}
+
+
+.user-select {
+
+  flex: 1;
+
+  min-width: 0;
+
+}
+
+
+.members-list {
+
+  border: 1px solid #808080;
+
+  background: white;
+
+  padding: 2px;
+
+  min-height: 30px;
+
+  max-height: 120px;
+
+  overflow-y: auto;
+
+}
+
+
+.member-item {
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap: 5px;
+
+  padding: 3px;
+
+}
+
+
+.member-item:hover {
+
+  background: #000080;
+
+  color: white;
+
+}
+
+
+.member-item button {
+
+  flex-shrink: 0;
+
+}
+
+
+.no-members {
+
+  padding: 5px;
+
+  color: #666;
+
+  font-size: 11px;
+
+}
+
+
+.new-group-members {
+
+  padding: 5px 0;
+
+  color: #666;
+
+  font-size: 11px;
+
+}
+
+
+/*
+ * Actions
+ */
+
 .actions {
 
   display: flex;
 
   gap: 4px;
 
+  margin-top: 8px;
+
 }
 
+
+/*
+ * Error
+ */
 
 .error {
 
