@@ -1,4 +1,4 @@
-import * as Permission from "../permissions.js";
+import Permission from "../permissions.js";
 import { getUserPermissions } from "./globalGroup.js";
 
 /**
