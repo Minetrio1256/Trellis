@@ -27,34 +27,28 @@ const form = ref({
 });
 
 
-const permissionInput = ref("");
+const selectedPermission = ref("");
 
-const permissionSuggestions = computed(() => {
 
-  const input =
-      permissionInput.value
-          .trim()
-          .toLowerCase();
+/*
+ * Permissions available from permissions.js
+ *
+ * Already-selected permissions are removed
+ * from the dropdown.
+ */
+const availablePermissions = computed(() => {
 
-  return Object.values(Permission)
-
-      .filter(permission =>
+  return Object.values(Permission).filter(
+      permission =>
           !form.value.permissions.includes(permission)
-      )
-
-      .filter(permission => {
-
-        if (!input)
-          return true;
-
-        return permission
-            .toLowerCase()
-            .includes(input);
-
-      });
+  );
 
 });
 
+
+/*
+ * API
+ */
 
 async function api(url, options = {}) {
 
@@ -77,6 +71,10 @@ async function api(url, options = {}) {
 }
 
 
+/*
+ * Load groups
+ */
+
 async function loadGroups() {
 
   loading.value = true;
@@ -89,17 +87,19 @@ async function loadGroups() {
         "/api/groups"
     );
 
-    if (!res.ok)
+    if (!res.ok) {
+
       throw new Error(
           "Failed loading groups"
       );
 
-    groups.value =
-        await res.json();
+    }
+
+    groups.value = await res.json();
 
   }
 
-  catch(err) {
+  catch (err) {
 
     error.value = err.message;
 
@@ -113,6 +113,10 @@ async function loadGroups() {
 
 }
 
+
+/*
+ * Select group
+ */
 
 async function selectGroup(group) {
 
@@ -131,12 +135,12 @@ async function selectGroup(group) {
 
   }
 
-  selected.value =
-      await res.json();
+  selected.value = await res.json();
 
   form.value = {
 
-    name: selected.value.name ?? "",
+    name:
+        selected.value.name ?? "",
 
     description:
         selected.value.description ?? "",
@@ -150,7 +154,7 @@ async function selectGroup(group) {
 
   };
 
-  permissionInput.value = "";
+  selectedPermission.value = "";
 
   editing.value = true;
 
@@ -158,6 +162,10 @@ async function selectGroup(group) {
 
 }
 
+
+/*
+ * New group
+ */
 
 function newGroup() {
 
@@ -175,7 +183,7 @@ function newGroup() {
 
   };
 
-  permissionInput.value = "";
+  selectedPermission.value = "";
 
   creating.value = true;
 
@@ -184,32 +192,38 @@ function newGroup() {
 }
 
 
-function addPermission(permission = null) {
+/*
+ * Add selected permission
+ */
 
-  const value = (
-      permission ??
-      permissionInput.value
-  ).trim();
+function addPermission() {
 
-  if (!value)
+  const permission =
+      selectedPermission.value;
+
+  if (!permission)
     return;
 
   if (
       !form.value.permissions.includes(
-          value
+          permission
       )
   ) {
 
     form.value.permissions.push(
-        value
+        permission
     );
 
   }
 
-  permissionInput.value = "";
+  selectedPermission.value = "";
 
 }
 
+
+/*
+ * Remove permission
+ */
 
 function removePermission(permission) {
 
@@ -221,12 +235,9 @@ function removePermission(permission) {
 }
 
 
-function clearPermissionInput() {
-
-  permissionInput.value = "";
-
-}
-
+/*
+ * Save group
+ */
 
 async function saveGroup() {
 
@@ -236,6 +247,7 @@ async function saveGroup() {
 
   let method = "POST";
 
+
   if (selected.value) {
 
     url =
@@ -244,6 +256,7 @@ async function saveGroup() {
     method = "PATCH";
 
   }
+
 
   const res = await api(
 
@@ -255,7 +268,8 @@ async function saveGroup() {
 
         body: JSON.stringify({
 
-          name: form.value.name,
+          name:
+          form.value.name,
 
           description:
           form.value.description,
@@ -287,12 +301,16 @@ async function saveGroup() {
 
   creating.value = false;
 
-  permissionInput.value = "";
+  selectedPermission.value = "";
 
   await loadGroups();
 
 }
 
+
+/*
+ * Delete group
+ */
 
 async function deleteGroup() {
 
@@ -304,8 +322,11 @@ async function deleteGroup() {
       !confirm(
           "Delete this group?"
       )
-  )
+  ) {
+
     return;
+
+  }
 
 
   const res = await api(
@@ -337,10 +358,16 @@ async function deleteGroup() {
 
   creating.value = false;
 
+  selectedPermission.value = "";
+
   await loadGroups();
 
 }
 
+
+/*
+ * Initial load
+ */
 
 onMounted(() => {
 
@@ -355,7 +382,9 @@ onMounted(() => {
 
   <div class="group-manager">
 
+
     <div class="columns">
+
 
       <!-- GROUP LIST -->
 
@@ -368,9 +397,12 @@ onMounted(() => {
 
         <button
             class="new"
+            type="button"
             @click="newGroup"
         >
+
           New
+
         </button>
 
 
@@ -396,6 +428,7 @@ onMounted(() => {
 
         </div>
 
+
       </fieldset>
 
 
@@ -416,6 +449,9 @@ onMounted(() => {
 
         <template v-if="editing">
 
+
+          <!-- NAME -->
+
           <label>
             Name
           </label>
@@ -424,6 +460,8 @@ onMounted(() => {
               v-model="form.name"
           >
 
+
+          <!-- DESCRIPTION -->
 
           <label>
             Description
@@ -434,6 +472,8 @@ onMounted(() => {
           />
 
 
+          <!-- DISCORD ROLE -->
+
           <label>
             Discord Role ID
           </label>
@@ -443,68 +483,53 @@ onMounted(() => {
           >
 
 
+          <!-- PERMISSIONS -->
+
           <label>
             Permissions
           </label>
 
 
-          <div class="permission-editor">
+          <div class="permission-selector">
 
-            <div class="permission-input-row">
-
-              <input
-                  v-model="permissionInput"
-                  placeholder="Search permissions..."
-                  autocomplete="off"
-                  @keyup.enter="addPermission()"
-              >
-
-              <button
-                  @click="addPermission()"
-              >
-                Add
-              </button>
-
-            </div>
-
-
-            <!-- PERMISSION SUGGESTIONS -->
-
-            <div
-                v-if="permissionInput || permissionSuggestions.length"
-                class="permission-suggestions"
+            <select
+                v-model="selectedPermission"
+                class="permission-select"
             >
 
-              <button
-                  v-for="permission in permissionSuggestions"
+              <option value="">
+                Select permission...
+              </option>
+
+
+              <option
+                  v-for="permission in availablePermissions"
                   :key="permission"
-                  type="button"
-                  class="permission-suggestion"
-                  @click="addPermission(permission)"
+                  :value="permission"
               >
 
                 {{ permission }}
 
-              </button>
+              </option>
+
+            </select>
 
 
-              <div
-                  v-if="permissionSuggestions.length === 0"
-                  class="no-suggestions"
-              >
+            <button
+                type="button"
+                @click="addPermission"
+            >
 
-                No matching permissions.
+              Add
 
-              </div>
-
-            </div>
+            </button>
 
           </div>
 
 
-          <!-- CURRENT PERMISSIONS -->
+          <!-- SELECTED PERMISSIONS -->
 
-          <div class="permission-list">
+          <div class="selected-permissions">
 
             <div
                 v-for="permission in form.permissions"
@@ -516,39 +541,71 @@ onMounted(() => {
                 {{ permission }}
               </span>
 
+
               <button
                   type="button"
-                  @click="removePermission(permission)"
+                  @click="
+                    removePermission(permission)
+                  "
               >
+
                 X
+
               </button>
+
+            </div>
+
+
+            <div
+                v-if="form.permissions.length === 0"
+                class="no-permissions"
+            >
+
+              No permissions assigned.
 
             </div>
 
           </div>
 
 
-          <div class="permission-hint">
+          <div class="permission-count">
 
             {{ form.permissions.length }}
-            permission{{ form.permissions.length === 1 ? "" : "s" }}
+            permission{{
+              form.permissions.length === 1
+                  ? ""
+                  : "s"
+            }}
 
           </div>
 
 
-          <button
-              @click="saveGroup"
-          >
-            Save
-          </button>
+          <!-- ACTIONS -->
+
+          <div class="actions">
+
+            <button
+                type="button"
+                @click="saveGroup"
+            >
+
+              Save
+
+            </button>
 
 
-          <button
-              v-if="selected"
-              @click="deleteGroup"
-          >
-            Delete
-          </button>
+            <button
+                v-if="selected"
+                type="button"
+                @click="deleteGroup"
+            >
+
+              Delete
+
+            </button>
+
+          </div>
+
 
         </template>
 
@@ -559,10 +616,13 @@ onMounted(() => {
 
         </p>
 
+
       </fieldset>
 
     </div>
 
+
+    <!-- ERROR -->
 
     <div
         v-if="error"
@@ -573,6 +633,8 @@ onMounted(() => {
 
     </div>
 
+
+    <!-- STATUS BAR -->
 
     <div class="status-bar">
 
@@ -590,6 +652,7 @@ onMounted(() => {
       </p>
 
     </div>
+
 
   </div>
 
@@ -618,12 +681,16 @@ onMounted(() => {
 
   width: 220px;
 
+  min-width: 220px;
+
 }
 
 
 .editor {
 
   flex: 1;
+
+  min-width: 0;
 
 }
 
@@ -688,113 +755,62 @@ textarea {
 
 
 /*
- * Permission editor
+ * Permission selector
+ *
+ * This is intentionally a native select.
+ *
+ * The Win98 CSS/browser handles:
+ * - dropdown arrow
+ * - scrollbar
+ * - dropdown appearance
  */
 
-.permission-editor {
-
-  position: relative;
-
-}
-
-
-.permission-input-row {
+.permission-selector {
 
   display: flex;
 
   gap: 4px;
 
-}
-
-
-.permission-input-row input {
-
-  flex: 1;
-
-}
-
-
-.permission-suggestions {
-
-  position: absolute;
-
-  z-index: 100;
-
-  left: 0;
-
-  right: 0;
-
-  max-height: 180px;
-
-  overflow-y: auto;
-
-  background: #fff;
-
-  color: #000;
-
-  border: 2px solid;
-
-  border-color: #808080 #fff #fff #808080;
-
-  padding: 2px;
+  width: 100%;
 
   box-sizing: border-box;
 
-}
-
-
-.permission-suggestion {
-
-  display: block;
-
-  width: 100%;
-
-  border: 0;
-
-  background: transparent;
-
-  text-align: left;
-
-  padding: 3px 5px;
-
-  cursor: pointer;
-
-  font-family: inherit;
+  margin-bottom: 8px;
 
 }
 
 
-.permission-suggestion:hover {
+.permission-select {
 
-  background: #000080;
+  flex: 1;
 
-  color: white;
-
-}
-
-
-.no-suggestions {
-
-  padding: 4px;
-
-  color: #555;
+  min-width: 0;
 
 }
 
 
 /*
  * Selected permissions
+ *
+ * Kept below the selector so nothing overlays
+ * the rest of the editor.
  */
 
-.permission-list {
+.selected-permissions {
 
-  margin-top: 10px;
+  border: 1px solid #808080;
 
-  display: flex;
+  background: white;
 
-  flex-direction: column;
+  padding: 2px;
 
-  gap: 3px;
+  min-height: 30px;
+
+  max-height: 130px;
+
+  overflow-y: auto;
+
+  box-sizing: border-box;
 
 }
 
@@ -807,11 +823,20 @@ textarea {
 
   justify-content: space-between;
 
-  padding: 3px 4px;
+  padding: 2px 3px;
 
-  background: #eee;
+  min-height: 20px;
 
-  border: 1px solid #999;
+  box-sizing: border-box;
+
+}
+
+
+.permission-item:hover {
+
+  background: #000080;
+
+  color: white;
 
 }
 
@@ -825,24 +850,44 @@ textarea {
 }
 
 
-.permission-hint {
+.no-permissions {
 
-  margin: 5px 0 10px;
+  padding: 5px;
 
-  color: #555;
+  color: #666;
 
   font-size: 11px;
 
 }
 
 
+.permission-count {
+
+  margin: 4px 0 8px;
+
+  font-size: 11px;
+
+  color: #555;
+
+}
+
+
+.actions {
+
+  display: flex;
+
+  gap: 4px;
+
+}
+
+
 .error {
 
-  margin-top: 8px;
+  margin-top: 5px;
+
+  padding: 3px;
 
   color: #800000;
-
-  padding: 4px;
 
 }
 
