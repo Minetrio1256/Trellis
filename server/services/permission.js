@@ -1,4 +1,4 @@
-import * as Permission from "../permissions.js";
+import Permission from "../permissions.js";
 import { query } from "../config/db.js";
 
 /**
@@ -199,39 +199,20 @@ export async function hasBoardPermission(
 export function permission(requiredPermission) {
     return async (req, res, next) => {
         try {
-            console.log("========== PERMISSION DEBUG ==========");
-            console.log("req.user:", req.user);
-            console.log("req.user.id:", req.user?.id);
-            console.log("requiredPermission:", requiredPermission);
-            console.log("Permission.ADMINISTRATOR:", Permission.ADMINISTRATOR);
-
-            const permissions = await getUserPermissions(req.user?.id);
-
-            console.log("DB permissions:", permissions);
-            console.log(
-                "is administrator:",
-                permissions.includes(Permission.ADMINISTRATOR)
-            );
-            console.log(
-                "has required permission:",
-                permissions.includes(requiredPermission)
-            );
-            console.log("=======================================");
-
             if (!req.user) {
                 return res.sendStatus(401);
             }
 
-            if (permissions.includes(Permission.ADMINISTRATOR)) {
-                return next();
-            }
+            const allowed = await hasPermission(
+                req.user,
+                requiredPermission
+            );
 
-            if (!permissions.includes(requiredPermission)) {
+            if (!allowed) {
                 return res.sendStatus(403);
             }
 
             next();
-
         } catch (error) {
             console.error("Permission check failed:", error);
             return res.sendStatus(500);
