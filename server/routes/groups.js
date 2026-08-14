@@ -8,6 +8,7 @@ import Permission from "../permissions.js";
 import {
     getAllGroups,
     getGroupByUUID,
+    getGroupUsers,
     createGroup,
     updateGroup,
     deleteGroup,
@@ -32,6 +33,26 @@ router.get(
     permission(Permission.GROUP_VIEW),
     async (req, res) => {
         res.json(await getAllGroups());
+    }
+);
+
+router.get(
+    "/:uuid/users",
+    auth,
+    permission(Permission.GROUP_VIEW),
+    async (req, res) => {
+
+        const group =
+            await getGroupByUUID(req.params.uuid);
+
+        if (!group) {
+            return res.sendStatus(404);
+        }
+
+        res.json(
+            await getGroupUsers(req.params.uuid)
+        );
+
     }
 );
 

@@ -35,6 +35,49 @@ router.get(
 );
 
 router.get(
+    "/:id/discord",
+    auth,
+    permission(Permission.USER_VIEW),
+    async (req, res) => {
+
+        try {
+
+            const user =
+                await getDiscordUserById(
+                    req.params.id
+                );
+
+            res.json({
+                id: user.id,
+                username: user.username,
+                global_name: user.global_name,
+                avatar: user.avatar
+            });
+
+        } catch (error) {
+
+            if (
+                error.response?.status === 404
+            ) {
+
+                return res.sendStatus(404);
+
+            }
+
+            console.error(
+                "Failed to fetch Discord user:",
+                error.response?.data ??
+                error.message
+            );
+
+            res.sendStatus(502);
+
+        }
+
+    }
+);
+
+router.get(
     "/:id/groups",
     auth,
     permission(Permission.USER_VIEW),

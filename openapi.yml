@@ -24,6 +24,7 @@ tags:
 components:
 
   securitySchemes:
+
     cookieAuth:
       type: apiKey
       in: cookie
@@ -33,70 +34,189 @@ components:
   schemas:
 
     Group:
+
       type: object
+
       properties:
+
         uuid:
           type: string
+          format: uuid
+
         name:
           type: string
+
         description:
           type: string
+          nullable: true
+
         permissions:
+
           type: array
+
           items:
             type: string
+
         discord_role_id:
           type: string
           nullable: true
 
-
-    User:
-      type: object
-      properties:
-        id:
-          type: string
         created_at:
           type: string
           format: date-time
 
+        updated_at:
+          type: string
+          format: date-time
+
+
+    User:
+
+      type: object
+
+      properties:
+
+        id:
+          type: string
+
+        created_at:
+          type: string
+          format: date-time
+
+        updated_at:
+          type: string
+          format: date-time
+
+
+    DiscordUser:
+
+      type: object
+
+      properties:
+
+        id:
+          type: string
+
+          description: Discord user ID
+
+        username:
+          type: string
+
+          description: Discord username
+
+        global_name:
+          type: string
+          nullable: true
+
+          description: Discord display name
+
+        avatar:
+          type: string
+          nullable: true
+
+          description: Discord avatar hash
+
+
+    GroupMember:
+
+      type: object
+
+      properties:
+
+        id:
+          type: string
+
+          description: Discord user ID
+
+
+    GroupWithMembers:
+
+      allOf:
+
+        - $ref: "#/components/schemas/Group"
+
+        - type: object
+
+          properties:
+
+            members:
+
+              type: array
+
+              items:
+                $ref: "#/components/schemas/GroupMember"
+
 
     Board:
+
       type: object
+
       properties:
+
         uuid:
           type: string
+          format: uuid
+
         name:
           type: string
+
         description:
           type: string
+          nullable: true
+
         created_by:
           type: string
+
         created_at:
+          type: string
+          format: date-time
+
+        updated_at:
           type: string
           format: date-time
 
 
     BoardGroup:
+
       type: object
+
       properties:
+
         uuid:
           type: string
+          format: uuid
+
         board_uuid:
           type: string
+          format: uuid
+
         name:
           type: string
+
         description:
           type: string
+          nullable: true
+
         permissions:
+
           type: array
+
           items:
             type: string
 
 
+    Error:
+
+      type: object
+
+      properties:
+
+        error:
+          type: string
+
 
 security:
   - cookieAuth: []
-
 
 
 paths:
@@ -106,34 +226,48 @@ paths:
   # AUTH
   # ======================
 
+
   /auth/login:
 
     get:
+
       tags:
         - Auth
+
       summary: Redirect to Discord login
 
+      security: []
+
       responses:
+
         "302":
           description: Discord redirect
-
 
 
   /auth/callback:
 
     get:
+
       tags:
         - Auth
+
       summary: Discord OAuth callback
 
+      security: []
+
       parameters:
+
         - name: code
+
           in: query
+
           required: true
+
           schema:
             type: string
 
       responses:
+
         "302":
           description: Login successful
 
@@ -141,34 +275,45 @@ paths:
           description: Not allowed
 
 
-
   /auth/me:
 
     get:
+
       tags:
         - Auth
+
       summary: Get current user
 
       responses:
+
         "200":
+
           description: Current Discord user
+
+          content:
+
+            application/json:
+
+              schema:
+                $ref: "#/components/schemas/User"
 
         "401":
           description: Not authenticated
 
 
-
   /auth/logout:
 
     post:
+
       tags:
         - Auth
+
       summary: Logout
 
       responses:
+
         "200":
           description: Logged out
-
 
 
   # ======================
@@ -188,6 +333,7 @@ paths:
       responses:
 
         "200":
+
           description: Groups
 
           content:
@@ -201,6 +347,8 @@ paths:
                 items:
                   $ref: "#/components/schemas/Group"
 
+        "403":
+          description: Insufficient permissions
 
 
     post:
@@ -210,6 +358,124 @@ paths:
 
       summary: Create global group
 
+      requestBody:
+
+        required: true
+
+        content:
+
+          application/json:
+
+            schema:
+
+              type: object
+
+              required:
+                - name
+                - permissions
+
+              properties:
+
+                name:
+                  type: string
+
+                description:
+                  type: string
+
+                permissions:
+
+                  type: array
+
+                  items:
+                    type: string
+
+                discord_role_id:
+                  type: string
+                  nullable: true
+
+      responses:
+
+        "201":
+
+          description: Created
+
+          content:
+
+            application/json:
+
+              schema:
+
+                type: object
+
+                properties:
+
+                  uuid:
+                    type: string
+                    format: uuid
+
+        "403":
+          description: Insufficient permissions
+
+
+  /groups/{uuid}:
+
+    get:
+
+      tags:
+        - Groups
+
+      summary: Get group
+
+      parameters:
+
+        - name: uuid
+
+          in: path
+
+          required: true
+
+          schema:
+            type: string
+            format: uuid
+
+      responses:
+
+        "200":
+
+          description: Group
+
+          content:
+
+            application/json:
+
+              schema:
+                $ref: "#/components/schemas/Group"
+
+        "404":
+          description: Group not found
+
+        "403":
+          description: Insufficient permissions
+
+
+    patch:
+
+      tags:
+        - Groups
+
+      summary: Update group
+
+      parameters:
+
+        - name: uuid
+
+          in: path
+
+          required: true
+
+          schema:
+            type: string
+            format: uuid
 
       requestBody:
 
@@ -232,57 +498,26 @@ paths:
                   type: string
 
                 permissions:
+
                   type: array
+
                   items:
                     type: string
 
                 discord_role_id:
                   type: string
-
-
-
-      responses:
-
-        "201":
-          description: Created
-
-
-
-  /groups/{uuid}:
-
-
-    get:
-
-      tags:
-        - Groups
-
-      summary: Get group
-
-
-      parameters:
-
-        - name: uuid
-          in: path
-          required: true
-
-          schema:
-            type: string
-
+                  nullable: true
 
       responses:
 
-        "200":
-          description: Group
+        "204":
+          description: Group updated
 
+        "403":
+          description: Insufficient permissions
 
-
-    patch:
-
-      tags:
-        - Groups
-
-      summary: Update group
-
+        "404":
+          description: Group not found
 
 
     delete:
@@ -292,10 +527,81 @@ paths:
 
       summary: Delete group
 
+      parameters:
+
+        - name: uuid
+
+          in: path
+
+          required: true
+
+          schema:
+            type: string
+            format: uuid
+
+      responses:
+
+        "204":
+          description: Group deleted
+
+        "403":
+          description: Insufficient permissions
+
+        "404":
+          description: Group not found
+
+
+  # ======================
+  # GROUP MEMBERS
+  # ======================
+
+
+  /groups/{uuid}/users:
+
+    get:
+
+      tags:
+        - Groups
+
+      summary: Get users belonging to a group
+
+      parameters:
+
+        - name: uuid
+
+          in: path
+
+          required: true
+
+          schema:
+            type: string
+            format: uuid
+
+      responses:
+
+        "200":
+
+          description: Group members
+
+          content:
+
+            application/json:
+
+              schema:
+
+                type: array
+
+                items:
+                  $ref: "#/components/schemas/GroupMember"
+
+        "403":
+          description: Insufficient permissions
+
+        "404":
+          description: Group not found
 
 
   /groups/{uuid}/users/{userId}:
-
 
     post:
 
@@ -304,6 +610,37 @@ paths:
 
       summary: Add user to group
 
+      parameters:
+
+        - name: uuid
+
+          in: path
+
+          required: true
+
+          schema:
+            type: string
+            format: uuid
+
+        - name: userId
+
+          in: path
+
+          required: true
+
+          schema:
+            type: string
+
+      responses:
+
+        "204":
+          description: User added to group
+
+        "403":
+          description: Insufficient permissions
+
+        "404":
+          description: Group or user not found
 
 
     delete:
@@ -313,13 +650,79 @@ paths:
 
       summary: Remove user from group
 
+      parameters:
 
+        - name: uuid
 
+          in: path
+
+          required: true
+
+          schema:
+            type: string
+            format: uuid
+
+        - name: userId
+
+          in: path
+
+          required: true
+
+          schema:
+            type: string
+
+      responses:
+
+        "204":
+          description: User removed from group
+
+        "403":
+          description: Insufficient permissions
+
+        "404":
+          description: Group or user not found
 
 
   # ======================
   # USERS
   # ======================
+
+
+  /users:
+
+    get:
+
+      tags:
+        - Users
+
+      summary: List all users
+
+      description: |
+        Returns all users known to the Kanban system.
+
+        Sensitive authentication credentials such as JWTs,
+        Discord access tokens and Discord refresh tokens
+        are not returned.
+
+      responses:
+
+        "200":
+
+          description: Users
+
+          content:
+
+            application/json:
+
+              schema:
+
+                type: array
+
+                items:
+                  $ref: "#/components/schemas/User"
+
+        "403":
+          description: Insufficient permissions
 
 
   /users/{id}:
@@ -331,20 +734,87 @@ paths:
 
       summary: Get user
 
-
       parameters:
 
         - name: id
+
           in: path
+
           required: true
 
           schema:
             type: string
 
+      responses:
+
+        "200":
+
+          description: User
+
+          content:
+
+            application/json:
+
+              schema:
+                $ref: "#/components/schemas/User"
+
+        "403":
+          description: Insufficient permissions
+
+        "404":
+          description: User not found
+
+
+  /users/{id}/discord:
+
+    get:
+
+      tags:
+        - Users
+
+      summary: Get Discord profile for a user
+
+      description: |
+        Resolves the stored Discord user ID to basic
+        Discord profile information.
+
+      parameters:
+
+        - name: id
+
+          in: path
+
+          required: true
+
+          schema:
+            type: string
+
+          description: Discord user ID
+
+      responses:
+
+        "200":
+
+          description: Discord user
+
+          content:
+
+            application/json:
+
+              schema:
+                $ref: "#/components/schemas/DiscordUser"
+
+        "403":
+          description: Insufficient permissions
+
+        "404":
+          description: Discord user not found
+
+        "502":
+          description: Discord API unavailable
 
 
   /users/{id}/groups:
-
 
     get:
 
@@ -353,6 +823,39 @@ paths:
 
       summary: Get user's groups
 
+      parameters:
+
+        - name: id
+
+          in: path
+
+          required: true
+
+          schema:
+            type: string
+
+      responses:
+
+        "200":
+
+          description: User groups
+
+          content:
+
+            application/json:
+
+              schema:
+
+                type: array
+
+                items:
+                  $ref: "#/components/schemas/Group"
+
+        "403":
+          description: Insufficient permissions
+
+        "404":
+          description: User not found
 
 
     put:
@@ -362,6 +865,16 @@ paths:
 
       summary: Replace user's groups
 
+      parameters:
+
+        - name: id
+
+          in: path
+
+          required: true
+
+          schema:
+            type: string
 
       requestBody:
 
@@ -379,10 +892,21 @@ paths:
 
                 type: string
 
+                format: uuid
+
+      responses:
+
+        "204":
+          description: User groups replaced
+
+        "403":
+          description: Insufficient permissions
+
+        "404":
+          description: User not found
 
 
   /users/{id}/permissions:
-
 
     get:
 
@@ -391,8 +915,39 @@ paths:
 
       summary: Get calculated user permissions
 
+      parameters:
 
+        - name: id
 
+          in: path
+
+          required: true
+
+          schema:
+            type: string
+
+      responses:
+
+        "200":
+
+          description: Calculated permissions
+
+          content:
+
+            application/json:
+
+              schema:
+
+                type: array
+
+                items:
+                  type: string
+
+        "403":
+          description: Insufficient permissions
+
+        "404":
+          description: User not found
 
 
   # ======================
@@ -402,7 +957,6 @@ paths:
 
   /boards:
 
-
     get:
 
       tags:
@@ -410,13 +964,22 @@ paths:
 
       summary: Get boards accessible by current user
 
-
       responses:
 
         "200":
 
           description: Accessible boards
 
+          content:
+
+            application/json:
+
+              schema:
+
+                type: array
+
+                items:
+                  $ref: "#/components/schemas/Board"
 
 
     post:
@@ -426,7 +989,6 @@ paths:
 
       summary: Create board
 
-
       requestBody:
 
         required: true
@@ -438,6 +1000,9 @@ paths:
             schema:
 
               type: object
+
+              required:
+                - name
 
               properties:
 
@@ -447,10 +1012,16 @@ paths:
                 description:
                   type: string
 
+      responses:
+
+        "201":
+          description: Board created
+
+        "403":
+          description: Insufficient permissions
 
 
   /boards/{uuid}:
-
 
     get:
 
@@ -458,6 +1029,29 @@ paths:
         - Boards
 
       summary: Get accessible board
+
+      parameters:
+
+        - name: uuid
+
+          in: path
+
+          required: true
+
+          schema:
+            type: string
+            format: uuid
+
+      responses:
+
+        "200":
+          description: Board
+
+        "403":
+          description: Insufficient permissions
+
+        "404":
+          description: Board not found
 
 
     patch:
@@ -467,6 +1061,25 @@ paths:
 
       summary: Update board
 
+      parameters:
+
+        - name: uuid
+
+          in: path
+
+          required: true
+
+          schema:
+            type: string
+            format: uuid
+
+      responses:
+
+        "204":
+          description: Board updated
+
+        "403":
+          description: Insufficient permissions
 
 
     delete:
@@ -476,12 +1089,28 @@ paths:
 
       summary: Delete board
 
+      parameters:
 
+        - name: uuid
 
+          in: path
+
+          required: true
+
+          schema:
+            type: string
+            format: uuid
+
+      responses:
+
+        "204":
+          description: Board deleted
+
+        "403":
+          description: Insufficient permissions
 
 
   /boards/{uuid}/groups:
-
 
     get:
 
@@ -490,6 +1119,37 @@ paths:
 
       summary: Get board groups
 
+      parameters:
+
+        - name: uuid
+
+          in: path
+
+          required: true
+
+          schema:
+            type: string
+            format: uuid
+
+      responses:
+
+        "200":
+
+          description: Board groups
+
+          content:
+
+            application/json:
+
+              schema:
+
+                type: array
+
+                items:
+                  $ref: "#/components/schemas/BoardGroup"
+
+        "403":
+          description: Insufficient permissions
 
 
     post:
@@ -499,6 +1159,17 @@ paths:
 
       summary: Create board group
 
+      parameters:
+
+        - name: uuid
+
+          in: path
+
+          required: true
+
+          schema:
+            type: string
+            format: uuid
 
       requestBody:
 
@@ -511,6 +1182,10 @@ paths:
             schema:
 
               type: object
+
+              required:
+                - name
+                - permissions
 
               properties:
 
@@ -525,15 +1200,18 @@ paths:
                   type: array
 
                   items:
-
                     type: string
 
+      responses:
 
+        "201":
+          description: Board group created
 
+        "403":
+          description: Insufficient permissions
 
 
   /boards/groups/{groupUuid}:
-
 
     patch:
 
@@ -542,6 +1220,28 @@ paths:
 
       summary: Update board group
 
+      parameters:
+
+        - name: groupUuid
+
+          in: path
+
+          required: true
+
+          schema:
+            type: string
+            format: uuid
+
+      responses:
+
+        "204":
+          description: Board group updated
+
+        "403":
+          description: Insufficient permissions
+
+        "404":
+          description: Board group not found
 
 
     delete:
@@ -551,12 +1251,31 @@ paths:
 
       summary: Delete board group
 
+      parameters:
 
+        - name: groupUuid
 
+          in: path
+
+          required: true
+
+          schema:
+            type: string
+            format: uuid
+
+      responses:
+
+        "204":
+          description: Board group deleted
+
+        "403":
+          description: Insufficient permissions
+
+        "404":
+          description: Board group not found
 
 
   /boards/groups/{groupUuid}/users/{userId}:
-
 
     post:
 
@@ -565,6 +1284,37 @@ paths:
 
       summary: Add board member
 
+      parameters:
+
+        - name: groupUuid
+
+          in: path
+
+          required: true
+
+          schema:
+            type: string
+            format: uuid
+
+        - name: userId
+
+          in: path
+
+          required: true
+
+          schema:
+            type: string
+
+      responses:
+
+        "204":
+          description: Board member added
+
+        "403":
+          description: Insufficient permissions
+
+        "404":
+          description: Board group or user not found
 
 
     delete:
@@ -573,3 +1323,35 @@ paths:
         - Boards
 
       summary: Remove board member
+
+      parameters:
+
+        - name: groupUuid
+
+          in: path
+
+          required: true
+
+          schema:
+            type: string
+            format: uuid
+
+        - name: userId
+
+          in: path
+
+          required: true
+
+          schema:
+            type: string
+
+      responses:
+
+        "204":
+          description: Board member removed
+
+        "403":
+          description: Insufficient permissions
+
+        "404":
+          description: Board group or user not found

@@ -1,6 +1,11 @@
 <script setup>
 
-import { ref, computed, onMounted } from "vue";
+import {
+  ref,
+  computed,
+  onMounted
+} from "vue";
+
 import Permission from "../permissions.js";
 
 
@@ -18,14 +23,21 @@ const loading = ref(false);
 
 const loadingUsers = ref(false);
 
+const loadingMembers = ref(false);
+
 const error = ref("");
+
+const memberProfiles = ref(new Map());
 
 
 const form = ref({
 
   name: "",
+
   description: "",
+
   permissions: [],
+
   discord_role_id: ""
 
 });
@@ -37,10 +49,10 @@ const selectedUser = ref("");
 
 
 /*
- * Permissions available from permissions.js.
+ * All permissions from permissions.js.
  *
- * Already assigned permissions are removed
- * from the dropdown.
+ * Anything already assigned is removed
+ * from the native select.
  */
 
 const availablePermissions = computed(() => {
@@ -54,31 +66,45 @@ const availablePermissions = computed(() => {
 
 
 /*
- * Users who are not currently members
- * of the selected group.
+ * IDs of users currently in the group.
  */
 
-const availableUsers = computed(() => {
+const memberIds = computed(() => {
 
   if (!selected.value)
-    return users.value;
+    return new Set();
 
-  const memberIds = new Set(
-      selected.value.members?.map(
-          member => String(member.id)
-      ) ?? []
-  );
-
-  return users.value.filter(
-      user =>
-          !memberIds.has(String(user.id))
+  return new Set(
+      (selected.value.members ?? []).map(
+          member => String(
+              typeof member === "object"
+                  ? member.id
+                  : member
+          )
+      )
   );
 
 });
 
 
 /*
- * API
+ * Users available to add.
+ */
+
+const availableUsers = computed(() => {
+
+  return users.value.filter(
+      user =>
+          !memberIds.value.has(
+              String(user.id)
+          )
+  );
+
+});
+
+
+/*
+ * API helper.
  */
 
 async function api(url, options = {}) {
@@ -103,7 +129,7 @@ async function api(url, options = {}) {
 
 
 /*
- * Load groups
+ * Load global groups.
  */
 
 async function loadGroups() {
@@ -130,14 +156,12 @@ async function loadGroups() {
         await res.json();
 
   }
-
   catch (err) {
 
     error.value =
         err.message;
 
   }
-
   finally {
 
     loading.value = false;
@@ -148,7 +172,7 @@ async function loadGroups() {
 
 
 /*
- * Load users
+ * Load all users known to the application.
  */
 
 async function loadUsers() {
@@ -173,14 +197,12 @@ async function loadUsers() {
         await res.json();
 
   }
-
   catch (err) {
 
     error.value =
         err.message;
 
   }
-
   finally {
 
     loadingUsers.value = false;
@@ -191,7 +213,171 @@ async function loadUsers() {
 
 
 /*
- * Load a group.
+ * Resolve a Discord user.
+ *
+ * The database only stores the Discord ID,
+ * so ask the backend for the Discord profile.
+ */
+
+async function loadDiscordProfile(userId) {
+
+  const id = String(userId);
+
+  if (memberProfiles.value.has(id)) {
+
+    return memberProfiles.value.get(id);
+
+  }
+
+  try {
+
+    const res = await api(
+        `/api/users/${encodeURIComponent(id)}/discord`
+    );
+
+    if (!res.ok) {
+
+      return {
+        id,
+        username: id
+      };
+
+    }
+
+    const profile =
+        await res.json();
+
+    const profiles =
+        new Map(memberProfiles.value);
+
+    profiles.set(
+        id,
+        profile
+    );
+
+    memberProfiles.value =
+        profiles;
+
+    return profile;
+
+  }
+  catch {
+
+    return {
+      id,
+      username: id
+    };
+
+  }
+
+}
+
+
+/*
+ * Load the members of a group.
+ *
+ * This intentionally uses the dedicated
+ * /groups/:uuid/users endpoint.
+ */
+
+async function loadGroupMembers(groupUuid) {
+
+  loadingMembers.value = true;
+
+  try {
+
+    const res = await api(
+        `/api/groups/${groupUuid}/users`
+    );
+
+    if (!res.ok) {
+
+      throw new Error(
+          "Failed loading group members"
+      );
+
+    }
+
+    const members =
+        await res.json();
+
+    /*
+     * Normalize whatever the backend returns.
+     *
+     * Supports:
+     *
+     * ["123", "456"]
+     *
+     * or:
+     *
+     * [{ id: "123" }, { id: "456" }]
+     */
+
+    const normalized =
+        members.map(member => {
+
+          if (
+              typeof member === "string" ||
+              typeof member === "number"
+          ) {
+
+            return {
+              id: String(member)
+            };
+
+          }
+
+          return {
+            ...member,
+            id: String(member.id)
+          };
+
+        });
+
+
+    selected.value = {
+
+      ...selected.value,
+
+      members: normalized
+
+    };
+
+
+    /*
+     * Resolve Discord profiles.
+     *
+     * 100 users max is completely reasonable
+     * for this internal tool.
+     */
+
+    await Promise.all(
+
+        normalized.map(
+            member =>
+                loadDiscordProfile(member.id)
+        )
+
+    );
+
+  }
+  catch (err) {
+
+    error.value =
+        err.message;
+
+  }
+  finally {
+
+    loadingMembers.value = false;
+
+  }
+
+}
+
+
+/*
+ * Select a group.
  */
 
 async function selectGroup(group) {
@@ -211,25 +397,36 @@ async function selectGroup(group) {
 
   }
 
-  selected.value =
+  const data =
       await res.json();
+
+
+  selected.value = {
+
+    ...data,
+
+    members: []
+
+  };
+
 
   form.value = {
 
     name:
-        selected.value.name ?? "",
+        data.name ?? "",
 
     description:
-        selected.value.description ?? "",
+        data.description ?? "",
 
     permissions: [
-      ...(selected.value.permissions ?? [])
+      ...(data.permissions ?? [])
     ],
 
     discord_role_id:
-        selected.value.discord_role_id ?? ""
+        data.discord_role_id ?? ""
 
   };
+
 
   selectedPermission.value = "";
 
@@ -238,6 +435,11 @@ async function selectGroup(group) {
   editing.value = true;
 
   creating.value = false;
+
+
+  await loadGroupMembers(
+      data.uuid
+  );
 
 }
 
@@ -274,7 +476,7 @@ function newGroup() {
 
 
 /*
- * Add permission.
+ * Add a permission.
  */
 
 function addPermission() {
@@ -284,6 +486,7 @@ function addPermission() {
 
   if (!permission)
     return;
+
 
   if (
       !form.value.permissions.includes(
@@ -297,13 +500,14 @@ function addPermission() {
 
   }
 
+
   selectedPermission.value = "";
 
 }
 
 
 /*
- * Remove permission.
+ * Remove a permission.
  */
 
 function removePermission(permission) {
@@ -317,7 +521,7 @@ function removePermission(permission) {
 
 
 /*
- * Add user to group.
+ * Add a user to the selected group.
  */
 
 async function addUser() {
@@ -328,14 +532,17 @@ async function addUser() {
   if (!selectedUser.value)
     return;
 
+
   error.value = "";
+
 
   const userId =
       selectedUser.value;
 
+
   const res = await api(
 
-      `/api/groups/${selected.value.uuid}/users/${userId}`,
+      `/api/groups/${selected.value.uuid}/users/${encodeURIComponent(userId)}`,
 
       {
 
@@ -344,6 +551,7 @@ async function addUser() {
       }
 
   );
+
 
   if (!res.ok) {
 
@@ -354,15 +562,19 @@ async function addUser() {
 
   }
 
+
   selectedUser.value = "";
 
-  await selectGroup(selected.value);
+
+  await loadGroupMembers(
+      selected.value.uuid
+  );
 
 }
 
 
 /*
- * Remove user from group.
+ * Remove a user from the selected group.
  */
 
 async function removeUser(user) {
@@ -370,9 +582,22 @@ async function removeUser(user) {
   if (!selected.value)
     return;
 
+
+  const userId =
+      String(
+          typeof user === "object"
+              ? user.id
+              : user
+      );
+
+
+  const name =
+      getUserName(user);
+
+
   if (
       !confirm(
-          `Remove ${getUserName(user)} from this group?`
+          `Remove ${name} from this group?`
       )
   ) {
 
@@ -380,11 +605,13 @@ async function removeUser(user) {
 
   }
 
+
   error.value = "";
+
 
   const res = await api(
 
-      `/api/groups/${selected.value.uuid}/users/${user.id}`,
+      `/api/groups/${selected.value.uuid}/users/${encodeURIComponent(userId)}`,
 
       {
 
@@ -393,6 +620,7 @@ async function removeUser(user) {
       }
 
   );
+
 
   if (!res.ok) {
 
@@ -403,39 +631,95 @@ async function removeUser(user) {
 
   }
 
-  await selectGroup(selected.value);
 
-}
-
-
-/*
- * User display helpers.
- *
- * Adjust these if your user API exposes
- * a different display-name field.
- */
-
-function getUserName(user) {
-
-  return (
-      user.username ??
-      user.name ??
-      user.global_name ??
-      user.id
+  await loadGroupMembers(
+      selected.value.uuid
   );
 
 }
 
 
+/*
+ * Get a user profile.
+ */
+
+function getProfile(user) {
+
+  const id =
+      String(
+          typeof user === "object"
+              ? user.id
+              : user
+      );
+
+  return (
+      memberProfiles.value.get(id) ??
+      null
+  );
+
+}
+
+
+/*
+ * Display name for a user.
+ */
+
+function getUserName(user) {
+
+  const id =
+      String(
+          typeof user === "object"
+              ? user.id
+              : user
+      );
+
+
+  const profile =
+      getProfile(user);
+
+
+  if (!profile)
+    return id;
+
+
+  return (
+      profile.global_name ??
+      profile.username ??
+      id
+  );
+
+}
+
+
+/*
+ * Display name + Discord ID.
+ */
+
 function getUserDisplay(user) {
 
+  const id =
+      String(
+          typeof user === "object"
+              ? user.id
+              : user
+      );
+
+
+  const profile =
+      getProfile(user);
+
+
+  if (!profile)
+    return id;
+
+
   const name =
-      getUserName(user);
+      profile.global_name ??
+      profile.username ??
+      id;
 
-  if (name === String(user.id))
-    return name;
 
-  return `${name} (${user.id})`;
+  return `${name} (${id})`;
 
 }
 
@@ -448,9 +732,12 @@ async function saveGroup() {
 
   error.value = "";
 
-  let url = "/api/groups";
 
-  let method = "POST";
+  let url =
+      "/api/groups";
+
+  let method =
+      "POST";
 
 
   if (selected.value) {
@@ -458,7 +745,8 @@ async function saveGroup() {
     url =
         `/api/groups/${selected.value.uuid}`;
 
-    method = "PATCH";
+    method =
+        "PATCH";
 
   }
 
@@ -502,6 +790,46 @@ async function saveGroup() {
   }
 
 
+  /*
+   * If this was a new group, the API returns
+   * its UUID. Reload the groups and leave the
+   * user in the normal group-manager flow.
+   */
+
+  if (method === "POST") {
+
+    const data =
+        await res.json();
+
+    editing.value = false;
+
+    creating.value = false;
+
+    selectedPermission.value = "";
+
+    selectedUser.value = "";
+
+    await loadGroups();
+
+    const newGroupData =
+        groups.value.find(
+            group =>
+                group.uuid === data.uuid
+        );
+
+    if (newGroupData) {
+
+      await selectGroup(
+          newGroupData
+      );
+
+    }
+
+    return;
+
+  }
+
+
   editing.value = false;
 
   creating.value = false;
@@ -510,7 +838,27 @@ async function saveGroup() {
 
   selectedUser.value = "";
 
+
   await loadGroups();
+
+
+  if (selected.value) {
+
+    const updated =
+        groups.value.find(
+            group =>
+                group.uuid === selected.value.uuid
+        );
+
+    if (updated) {
+
+      await selectGroup(
+          updated
+      );
+
+    }
+
+  }
 
 }
 
@@ -569,6 +917,7 @@ async function deleteGroup() {
 
   selectedUser.value = "";
 
+
   await loadGroups();
 
 }
@@ -597,11 +946,12 @@ onMounted(async () => {
 
   <div class="group-manager">
 
-
     <div class="columns">
 
 
+      <!-- ========================= -->
       <!-- GROUP LIST -->
+      <!-- ========================= -->
 
       <fieldset class="list">
 
@@ -629,6 +979,16 @@ onMounted(async () => {
 
 
         <div
+            v-else-if="groups.length === 0"
+            class="empty"
+        >
+
+          No groups.
+
+        </div>
+
+
+        <div
             v-for="group in groups"
             :key="group.uuid"
             class="group-item"
@@ -639,15 +999,18 @@ onMounted(async () => {
               src="https://win98icons.alexmeub.com/icons/png/user_computer_pair-0.png"
           >
 
-          {{ group.name }}
+          <span>
+            {{ group.name }}
+          </span>
 
         </div>
-
 
       </fieldset>
 
 
+      <!-- ========================= -->
       <!-- EDITOR -->
+      <!-- ========================= -->
 
       <fieldset class="editor">
 
@@ -698,7 +1061,9 @@ onMounted(async () => {
           >
 
 
+          <!-- ========================= -->
           <!-- PERMISSIONS -->
+          <!-- ========================= -->
 
           <label>
             Permissions
@@ -734,6 +1099,7 @@ onMounted(async () => {
 
             <button
                 type="button"
+                :disabled="!selectedPermission"
                 @click="addPermission"
             >
 
@@ -759,9 +1125,7 @@ onMounted(async () => {
 
               <button
                   type="button"
-                  @click="
-                    removePermission(permission)
-                  "
+                  @click="removePermission(permission)"
               >
 
                 X
@@ -772,7 +1136,9 @@ onMounted(async () => {
 
 
             <div
-                v-if="form.permissions.length === 0"
+                v-if="
+                form.permissions.length === 0
+              "
                 class="no-permissions"
             >
 
@@ -795,7 +1161,9 @@ onMounted(async () => {
           </div>
 
 
+          <!-- ========================= -->
           <!-- MEMBERS -->
+          <!-- ========================= -->
 
           <label>
             Members
@@ -807,14 +1175,19 @@ onMounted(async () => {
               class="members-section"
           >
 
-            <!-- ADD USER -->
+
+            <!-- ADD MEMBER -->
 
             <div class="member-add">
 
               <select
                   v-model="selectedUser"
                   class="user-select"
-                  :disabled="loadingUsers"
+                  :disabled="
+                  loadingUsers ||
+                  loadingMembers ||
+                  availableUsers.length === 0
+                "
               >
 
                 <option value="">
@@ -822,7 +1195,11 @@ onMounted(async () => {
                   {{
                     loadingUsers
                         ? "Loading users..."
-                        : "Select user..."
+                        : loadingMembers
+                            ? "Loading members..."
+                            : availableUsers.length === 0
+                                ? "All users are members"
+                                : "Select user..."
                   }}
 
                 </option>
@@ -843,7 +1220,10 @@ onMounted(async () => {
 
               <button
                   type="button"
-                  :disabled="!selectedUser"
+                  :disabled="
+                  !selectedUser ||
+                  loadingMembers
+                "
                   @click="addUser"
               >
 
@@ -859,12 +1239,27 @@ onMounted(async () => {
             <div class="members-list">
 
               <div
-                  v-for="user in (selected.members ?? [])"
+                  v-if="loadingMembers"
+                  class="members-loading"
+              >
+
+                Loading members...
+
+              </div>
+
+
+              <div
+                  v-for="user in (
+                  selected.members ?? []
+                )"
                   :key="user.id"
                   class="member-item"
               >
 
-                <span>
+                <span
+                    class="member-name"
+                    :title="user.id"
+                >
 
                   {{ getUserDisplay(user) }}
 
@@ -885,9 +1280,12 @@ onMounted(async () => {
 
               <div
                   v-if="
+                  !loadingMembers &&
+                  (
                     !selected.members ||
                     selected.members.length === 0
-                  "
+                  )
+                "
                   class="no-members"
               >
 
@@ -910,7 +1308,9 @@ onMounted(async () => {
           </div>
 
 
+          <!-- ========================= -->
           <!-- ACTIONS -->
+          <!-- ========================= -->
 
           <div class="actions">
 
@@ -945,7 +1345,6 @@ onMounted(async () => {
           Select a group.
 
         </p>
-
 
       </fieldset>
 
@@ -983,7 +1382,6 @@ onMounted(async () => {
 
     </div>
 
-
   </div>
 
 </template>
@@ -995,6 +1393,8 @@ onMounted(async () => {
 
   width: 100%;
 
+  box-sizing: border-box;
+
 }
 
 
@@ -1003,6 +1403,10 @@ onMounted(async () => {
   display: flex;
 
   gap: 10px;
+
+  width: 100%;
+
+  min-width: 0;
 
 }
 
@@ -1013,6 +1417,8 @@ onMounted(async () => {
 
   min-width: 220px;
 
+  box-sizing: border-box;
+
 }
 
 
@@ -1021,6 +1427,8 @@ onMounted(async () => {
   flex: 1;
 
   min-width: 0;
+
+  box-sizing: border-box;
 
 }
 
@@ -1036,6 +1444,19 @@ onMounted(async () => {
   padding: 4px;
 
   cursor: pointer;
+
+  overflow: hidden;
+
+}
+
+
+.group-item span {
+
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+
+  white-space: nowrap;
 
 }
 
@@ -1055,6 +1476,17 @@ onMounted(async () => {
 
   height: 20px;
 
+  flex-shrink: 0;
+
+}
+
+
+.empty {
+
+  padding: 5px;
+
+  color: #666;
+
 }
 
 
@@ -1073,6 +1505,25 @@ textarea {
 textarea {
 
   height: 80px;
+
+  resize: vertical;
+
+}
+
+
+/*
+ * Native Win98-style select.
+ *
+ * Do NOT replace this with a custom div.
+ * The browser's native select provides
+ * the scrollbar/dropdown behavior.
+ */
+
+select {
+
+  box-sizing: border-box;
+
+  min-width: 0;
 
 }
 
@@ -1098,7 +1549,7 @@ textarea {
 
   box-sizing: border-box;
 
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 
 }
 
@@ -1107,18 +1558,25 @@ textarea {
 
   flex: 1;
 
-  min-width: 0;
+  width: 1px;
+
+}
+
+
+.permission-selector button {
+
+  flex-shrink: 0;
 
 }
 
 
 /*
- * Selected permissions
+ * Assigned permissions.
  */
 
 .selected-permissions {
 
-  border: 1px solid #808080;
+  border: 2px inset #dfdfdf;
 
   background: white;
 
@@ -1143,6 +1601,8 @@ textarea {
 
   justify-content: space-between;
 
+  gap: 5px;
+
   padding: 2px 3px;
 
   min-height: 20px;
@@ -1161,11 +1621,24 @@ textarea {
 }
 
 
+.permission-item span {
+
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+
+  white-space: nowrap;
+
+}
+
+
 .permission-item button {
 
   min-width: 22px;
 
   padding: 1px 4px;
+
+  flex-shrink: 0;
 
 }
 
@@ -1183,7 +1656,7 @@ textarea {
 
 .permission-count {
 
-  margin: 4px 0 8px;
+  margin: 3px 0 8px;
 
   font-size: 11px;
 
@@ -1193,12 +1666,16 @@ textarea {
 
 
 /*
- * Members
+ * Members.
  */
 
 .members-section {
 
-  margin-bottom: 10px;
+  width: 100%;
+
+  min-width: 0;
+
+  margin-bottom: 8px;
 
 }
 
@@ -1209,6 +1686,8 @@ textarea {
 
   gap: 4px;
 
+  width: 100%;
+
   margin-bottom: 6px;
 
 }
@@ -1218,14 +1697,21 @@ textarea {
 
   flex: 1;
 
-  min-width: 0;
+  width: 1px;
+
+}
+
+
+.member-add button {
+
+  flex-shrink: 0;
 
 }
 
 
 .members-list {
 
-  border: 1px solid #808080;
+  border: 2px inset #dfdfdf;
 
   background: white;
 
@@ -1236,6 +1722,19 @@ textarea {
   max-height: 120px;
 
   overflow-y: auto;
+
+  box-sizing: border-box;
+
+}
+
+
+.members-loading {
+
+  padding: 5px;
+
+  color: #666;
+
+  font-size: 11px;
 
 }
 
@@ -1252,6 +1751,10 @@ textarea {
 
   padding: 3px;
 
+  min-height: 22px;
+
+  box-sizing: border-box;
+
 }
 
 
@@ -1260,6 +1763,19 @@ textarea {
   background: #000080;
 
   color: white;
+
+}
+
+
+.member-name {
+
+  min-width: 0;
+
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+
+  white-space: nowrap;
 
 }
 
@@ -1294,7 +1810,7 @@ textarea {
 
 
 /*
- * Actions
+ * Actions.
  */
 
 .actions {
@@ -1309,7 +1825,7 @@ textarea {
 
 
 /*
- * Error
+ * Error.
  */
 
 .error {
@@ -1319,6 +1835,8 @@ textarea {
   padding: 3px;
 
   color: #800000;
+
+  overflow-wrap: anywhere;
 
 }
 

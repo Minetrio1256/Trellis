@@ -180,6 +180,20 @@ export async function getUserPermissions(userId) {
     return [...permissions];
 }
 
+export async function getGroupUsers(groupUUID) {
+
+    return await query(`
+        SELECT
+            u.id
+        FROM user_groups ug
+        JOIN users u
+            ON u.id = ug.user_id
+        WHERE ug.group_uuid = ?
+        ORDER BY u.id
+    `, [groupUUID]);
+
+}
+
 /*
  * Discord Role Synchronization
  */
