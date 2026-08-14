@@ -59,9 +59,9 @@ export async function getDiscordUser(accessToken) {
  * This uses the bot token because /users/{user.id}
  * is not an OAuth "current user" endpoint.
  */
-export async function getDiscordUserById(userId) {
+export async function getDiscordGuildMember(userId) {
     const { data } = await axios.get(
-        `${API}/users/${userId}`,
+        `${API}/guilds/${env.DISCORD_GUILD_ID}/members/${userId}`,
         {
             headers: {
                 Authorization: `Bot ${env.DISCORD_BOT_TOKEN}`

@@ -16,7 +16,7 @@ import {
 } from "../services/globalGroup.js";
 
 import {
-    getDiscordUserById
+    getDiscordGuildMember
 } from "../services/discord.js";
 
 const router = express.Router();
@@ -47,7 +47,7 @@ router.get(
         try {
 
             const user =
-                await getDiscordUserById(
+                await getDiscordGuildMember(
                     req.params.id
                 );
 

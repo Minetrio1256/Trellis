@@ -34,7 +34,8 @@ const env = Object.freeze({
 
     // Discord authorization
     DISCORD_GUILD_ID: required("DISCORD_GUILD_ID"),
-    DISCORD_REQUIRED_ROLE: required("DISCORD_REQUIRED_ROLE")
+    DISCORD_REQUIRED_ROLE: required("DISCORD_REQUIRED_ROLE"),
+    DISCORD_BOT_TOKEN: required("DISCORD_BOT_TOKEN")
 });
 
 export default env;
