@@ -50,12 +50,21 @@ export async function getUser(accessToken) {
 }
 
 export async function getDiscordUser(accessToken) {
+    return getUser(accessToken);
+}
 
+/*
+ * Get any Discord user by their Discord ID.
+ *
+ * This uses the bot token because /users/{user.id}
+ * is not an OAuth "current user" endpoint.
+ */
+export async function getDiscordUserById(userId) {
     const { data } = await axios.get(
-        `${API}/users/@me`,
+        `${API}/users/${userId}`,
         {
             headers: {
-                Authorization: `Bearer ${accessToken}`
+                Authorization: `Bot ${env.DISCORD_BOT_TOKEN}`
             }
         }
     );

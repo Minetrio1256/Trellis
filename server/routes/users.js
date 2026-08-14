@@ -15,6 +15,10 @@ import {
     setUserGroups
 } from "../services/globalGroup.js";
 
+import {
+    getDiscordUserById
+} from "../services/discord.js";
+
 const router = express.Router();
 
 router.get(
