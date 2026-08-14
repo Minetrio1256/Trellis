@@ -10,6 +10,18 @@ export async function findUser(id) {
     return rows[0];
 }
 
+export async function getAllUsers() {
+
+    return await query(`
+        SELECT
+            id,
+            created_at,
+            updated_at
+        FROM users
+        ORDER BY id
+    `);
+
+}
 
 export async function saveSession(
     id,
