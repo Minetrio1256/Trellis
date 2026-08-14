@@ -5,7 +5,8 @@ import { permission } from "../services/permission.js";
 import Permission from "../permissions.js";
 
 import {
-    findUser
+    findUser,
+    getAllUsers
 } from "../services/users.js";
 
 import {
