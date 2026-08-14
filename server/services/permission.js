@@ -1,26 +1,30 @@
-import Permission from "../permissions.js";
+import * as Permission from "../permissions.js";
+import { getUserPermissions } from "./globalGroup.js";
 
-import {
-    getUserPermissions
-} from "./globalGroup.js";
-
-import { query } from "../config/db.js";
-
-/*
- * Global Permissions
+/**
+ * Get the current permissions for a user from the database.
  */
+export async function getPermissions(user) {
+    if (!user?.id) {
+        return [];
+    }
+
+    return await getUserPermissions(user.id);
+}
 
 /**
  * Checks if a user has a global permission.
  *
+ * Permissions are loaded from the database.
  * Administrator always succeeds.
  */
 export async function hasPermission(user, permission) {
-    if (!user) {
+
+    if (!user?.id) {
         return false;
     }
 
-    const permissions = await getUserPermissions(user.id);
+    const permissions = await getPermissions(user);
 
     if (permissions.includes(Permission.ADMINISTRATOR)) {
         return true;
@@ -34,19 +38,25 @@ export async function hasPermission(user, permission) {
  *
  * Administrator always succeeds.
  */
-export async function hasPermissions(user, requiredPermissions) {
-    if (!user) {
+export async function hasPermissions(user, permissions) {
+
+    if (!user?.id) {
         return false;
     }
 
-    const permissions = await getUserPermissions(user.id);
+    const userPermissions = await getPermissions(user);
 
-    if (permissions.includes(Permission.ADMINISTRATOR)) {
+    if (
+        userPermissions.includes(
+            Permission.ADMINISTRATOR
+        )
+    ) {
         return true;
     }
 
-    return requiredPermissions.every(permission =>
-        permissions.includes(permission)
+    return permissions.every(
+        permission =>
+            userPermissions.includes(permission)
     );
 }
 
@@ -55,170 +65,86 @@ export async function hasPermissions(user, requiredPermissions) {
  *
  * Administrator always succeeds.
  */
-export async function hasAnyPermission(user, requiredPermissions) {
-    if (!user) {
+export async function hasAnyPermission(user, permissions) {
+
+    if (!user?.id) {
         return false;
     }
 
-    const permissions = await getUserPermissions(user.id);
+    const userPermissions = await getPermissions(user);
 
-    if (permissions.includes(Permission.ADMINISTRATOR)) {
+    if (
+        userPermissions.includes(
+            Permission.ADMINISTRATOR
+        )
+    ) {
         return true;
     }
 
-    return requiredPermissions.some(permission =>
-        permissions.includes(permission)
+    return permissions.some(
+        permission =>
+            userPermissions.includes(permission)
     );
-}
-
-/*
- * Board Permissions
- */
-
-/**
- * Gets all permissions a user has on a specific board.
- *
- * Includes:
- *
- * - Global group permissions
- * - Board group permissions
- */
-export async function getBoardPermissions(userId, boardUuid) {
-    if (!userId || !boardUuid) {
-        return [];
-    }
-
-    const globalPermissions = await getUserPermissions(userId);
-
-    const boardGroups = await query(`
-        SELECT bg.permissions
-        FROM board_group_members bgm
-        INNER JOIN board_groups bg
-            ON bg.uuid = bgm.board_group_uuid
-        WHERE bgm.user_id = ?
-          AND bg.board_uuid = ?
-    `, [
-        userId,
-        boardUuid
-    ]);
-
-    const permissions = new Set(globalPermissions);
-
-    for (const group of boardGroups) {
-        const groupPermissions = Array.isArray(group.permissions)
-            ? group.permissions
-            : JSON.parse(group.permissions);
-
-        for (const permission of groupPermissions) {
-            permissions.add(permission);
-        }
-    }
-
-    return [...permissions];
 }
 
 /**
  * Checks permissions on a specific board.
  *
- * Global permissions extend to board permissions.
- *
+ * Global permissions and board permissions are combined.
  * Administrator always succeeds.
  */
 export async function hasBoardPermission(
     user,
-    boardUuid,
+    boardPermissions = [],
     permission
 ) {
-    if (!user) {
+
+    if (!user?.id) {
         return false;
     }
 
-    const permissions = await getBoardPermissions(
-        user.id,
-        boardUuid
-    );
+    const userPermissions =
+        await getPermissions(user);
 
-    if (permissions.includes(Permission.ADMINISTRATOR)) {
+    if (
+        userPermissions.includes(
+            Permission.ADMINISTRATOR
+        )
+    ) {
         return true;
     }
 
-    return permissions.includes(permission);
+    return (
+        userPermissions.includes(permission) ||
+        boardPermissions.includes(permission)
+    );
 }
 
-/*
- * Middleware
- */
-
 /**
- * Global permission middleware.
- *
- * Usage:
- *
- * router.get(
- *     "/users",
- *     auth,
- *     permission(Permission.USER_VIEW),
- *     handler
- * );
+ * Express permission middleware.
  */
 export function permission(requiredPermission) {
-    return async (req, res, next) => {
-        try {
-            if (!req.user) {
-                return res.sendStatus(401);
-            }
 
-            const allowed = await hasPermission(
-                req.user,
-                requiredPermission
-            );
+    return async (req, res, next) => {
+
+        try {
+
+            const allowed =
+                await hasPermission(
+                    req.user,
+                    requiredPermission
+                );
 
             if (!allowed) {
                 return res.sendStatus(403);
             }
 
             next();
+
         } catch (error) {
-            console.error("Permission check failed:", error);
-            return res.sendStatus(500);
-        }
-    };
-}
 
-/**
- * Board permission middleware.
- *
- * Expects:
- *
- * /boards/:boardUuid/...
- */
-export function boardPermission(requiredPermission) {
-    return async (req, res, next) => {
-        try {
-            if (!req.user) {
-                return res.sendStatus(401);
-            }
-
-            const boardUuid = req.params.boardUuid;
-
-            if (!boardUuid) {
-                return res.sendStatus(400);
-            }
-
-            const allowed = await hasBoardPermission(
-                req.user,
-                boardUuid,
-                requiredPermission
-            );
-
-            if (!allowed) {
-                return res.sendStatus(403);
-            }
-
-            next();
-        } catch (error) {
             console.error(
-                "Board permission check failed:",
+                "Permission check failed:",
                 error
             );
 
