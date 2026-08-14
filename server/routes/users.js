@@ -81,6 +81,19 @@ router.get(
     }
 );
 
+router.get(
+    "/",
+    auth,
+    permission(Permission.USER_VIEW),
+    async (req, res) => {
+
+        res.json(
+            await getAllUsers()
+        );
+
+    }
+);
+
 const usersRouter = router;
 
 export default usersRouter;
