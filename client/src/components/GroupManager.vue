@@ -173,6 +173,10 @@ async function loadGroups() {
 
 /*
  * Load all users known to the application.
+ *
+ * The user ID is kept internally, but the
+ * Discord profile is loaded so the UI can
+ * display the username instead.
  */
 
 async function loadUsers() {
@@ -195,6 +199,20 @@ async function loadUsers() {
 
     users.value =
         await res.json();
+
+
+    /*
+     * Resolve the Discord profile for every user.
+     */
+
+    await Promise.all(
+
+        users.value.map(
+            user =>
+                loadDiscordProfile(user.id)
+        )
+
+    );
 
   }
   catch (err) {
@@ -237,10 +255,23 @@ async function loadDiscordProfile(userId) {
 
     if (!res.ok) {
 
-      return {
+      const fallback = {
         id,
         username: id
       };
+
+      const profiles =
+          new Map(memberProfiles.value);
+
+      profiles.set(
+          id,
+          fallback
+      );
+
+      memberProfiles.value =
+          profiles;
+
+      return fallback;
 
     }
 
@@ -263,10 +294,23 @@ async function loadDiscordProfile(userId) {
   }
   catch {
 
-    return {
+    const fallback = {
       id,
       username: id
     };
+
+    const profiles =
+        new Map(memberProfiles.value);
+
+    profiles.set(
+        id,
+        fallback
+    );
+
+    memberProfiles.value =
+        profiles;
+
+    return fallback;
 
   }
 
@@ -300,6 +344,7 @@ async function loadGroupMembers(groupUuid) {
 
     const members =
         await res.json();
+
 
     /*
      * Normalize whatever the backend returns.
@@ -345,10 +390,7 @@ async function loadGroupMembers(groupUuid) {
 
 
     /*
-     * Resolve Discord profiles.
-     *
-     * 100 users max is completely reasonable
-     * for this internal tool.
+     * Resolve Discord profiles for current members.
      */
 
     await Promise.all(
@@ -662,6 +704,8 @@ function getProfile(user) {
 
 /*
  * Display name for a user.
+ *
+ * Prefer Discord global_name, then username.
  */
 
 function getUserName(user) {
@@ -687,39 +731,6 @@ function getUserName(user) {
       profile.username ??
       id
   );
-
-}
-
-
-/*
- * Display name + Discord ID.
- */
-
-function getUserDisplay(user) {
-
-  const id =
-      String(
-          typeof user === "object"
-              ? user.id
-              : user
-      );
-
-
-  const profile =
-      getProfile(user);
-
-
-  if (!profile)
-    return id;
-
-
-  const name =
-      profile.global_name ??
-      profile.username ??
-      id;
-
-
-  return `${name} (${id})`;
 
 }
 
@@ -1211,7 +1222,7 @@ onMounted(async () => {
                     :value="user.id"
                 >
 
-                  {{ getUserDisplay(user) }}
+                  {{ getUserName(user) }}
 
                 </option>
 
@@ -1261,7 +1272,7 @@ onMounted(async () => {
                     :title="user.id"
                 >
 
-                  {{ getUserDisplay(user) }}
+                  {{ getUserName(user) }}
 
                 </span>
 
@@ -1510,14 +1521,6 @@ textarea {
 
 }
 
-
-/*
- * Native Win98-style select.
- *
- * Do NOT replace this with a custom div.
- * The browser's native select provides
- * the scrollbar/dropdown behavior.
- */
 
 select {
 
