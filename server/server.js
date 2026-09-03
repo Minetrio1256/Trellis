@@ -27,7 +27,7 @@ const dist = path.join(__dirname, "../client/dist");
 
 app.use(express.static(dist));
 
-app.get("/{*splat}", (req, res) => {
+app.get("*", (req, res) => {
     res.sendFile(path.join(dist, "index.html"));
 });
 
