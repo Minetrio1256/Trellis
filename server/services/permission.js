@@ -6,48 +6,27 @@ import { getUserPermissions } from "./globalGroup.js";
  */
 export async function getPermissions(user) {
     if (!user?.id) {
-        console.log("❌ getPermissions: missing user.id", user);
         return [];
     }
 
-    const permissions = await getUserPermissions(user.id);
-
-    console.log("🔐 Loaded permissions:", {
-        userId: user.id,
-        permissions
-    });
-
-    return permissions;
+    return await getUserPermissions(user.id);
 }
 
 /**
  * Checks if a user has a global permission.
  *
+ * Permissions are loaded from the database.
  * Administrator always succeeds.
  */
 export async function hasPermission(user, permission) {
+
     if (!user?.id) {
-        console.log("❌ Permission denied: no user.id", user);
         return false;
     }
 
     const permissions = await getPermissions(user);
 
-    console.log("🔐 Permission check:", {
-        userId: user.id,
-        requiredPermission: permission,
-        permissions,
-        administratorPermission: Permission.ADMINISTRATOR,
-        isAdministrator: permissions.includes(
-            Permission.ADMINISTRATOR
-        )
-    });
-
-    if (
-        permissions.includes(
-            Permission.ADMINISTRATOR
-        )
-    ) {
+    if (permissions.includes(Permission.ADMINISTRATOR)) {
         return true;
     }
 
@@ -60,12 +39,12 @@ export async function hasPermission(user, permission) {
  * Administrator always succeeds.
  */
 export async function hasPermissions(user, permissions) {
+
     if (!user?.id) {
         return false;
     }
 
-    const userPermissions =
-        await getPermissions(user);
+    const userPermissions = await getPermissions(user);
 
     if (
         userPermissions.includes(
@@ -87,12 +66,12 @@ export async function hasPermissions(user, permissions) {
  * Administrator always succeeds.
  */
 export async function hasAnyPermission(user, permissions) {
+
     if (!user?.id) {
         return false;
     }
 
-    const userPermissions =
-        await getPermissions(user);
+    const userPermissions = await getPermissions(user);
 
     if (
         userPermissions.includes(
@@ -119,6 +98,7 @@ export async function hasBoardPermission(
     boardPermissions = [],
     permission
 ) {
+
     if (!user?.id) {
         return false;
     }
@@ -144,14 +124,10 @@ export async function hasBoardPermission(
  * Express permission middleware.
  */
 export function permission(requiredPermission) {
+
     return async (req, res, next) => {
+
         try {
-            console.log("🛡️ Checking permission:", {
-                path: req.path,
-                method: req.method,
-                user: req.user,
-                requiredPermission
-            });
 
             const allowed =
                 await hasPermission(
@@ -160,28 +136,13 @@ export function permission(requiredPermission) {
                 );
 
             if (!allowed) {
-                console.log(
-                    "❌ Permission denied:",
-                    {
-                        userId: req.user?.id,
-                        requiredPermission
-                    }
-                );
-
                 return res.sendStatus(403);
             }
-
-            console.log(
-                "✅ Permission granted:",
-                {
-                    userId: req.user?.id,
-                    requiredPermission
-                }
-            );
 
             next();
 
         } catch (error) {
+
             console.error(
                 "Permission check failed:",
                 error
