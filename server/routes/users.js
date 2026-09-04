@@ -43,29 +43,25 @@ router.get(
     auth,
     permission(Permission.USER_VIEW),
     async (req, res) => {
-
         try {
+            const member = await getDiscordGuildMember(
+                req.params.id
+            );
 
-            const user =
-                await getDiscordGuildMember(
-                    req.params.id
-                );
+            if (!member?.user) {
+                return res.sendStatus(404);
+            }
 
             res.json({
-                id: user.id,
-                username: user.username,
-                global_name: user.global_name,
-                avatar: user.avatar
+                id: member.user.id,
+                username: member.user.username,
+                global_name: member.user.global_name,
+                avatar: member.user.avatar
             });
 
         } catch (error) {
-
-            if (
-                error.response?.status === 404
-            ) {
-
+            if (error.response?.status === 404) {
                 return res.sendStatus(404);
-
             }
 
             console.error(
@@ -74,10 +70,8 @@ router.get(
                 error.message
             );
 
-            res.sendStatus(502);
-
+            return res.sendStatus(502);
         }
-
     }
 );
 
