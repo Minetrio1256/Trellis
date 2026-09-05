@@ -1,6 +1,11 @@
 <script setup>
 
-import { ref, onMounted, onUnmounted } from "vue";
+import {
+  ref,
+  onMounted,
+  onUnmounted
+} from "vue";
+
 
 import StartMenu from "../components/StartMenu.vue";
 import ShutdownScreen from "../components/ShutdownScreen.vue";
@@ -9,6 +14,7 @@ import DesktopWindow from "../components/DesktopWindow.vue";
 
 import UserManager from "../components/UserManager.vue";
 import GroupManager from "../components/GroupManager.vue";
+import BoardManager from "../components/BoardManager.vue";
 
 import { useDesktopStore } from "../stores/desktop";
 
@@ -26,18 +32,23 @@ const props = defineProps({
 });
 
 
-const desktop = useDesktopStore();
+const desktop =
+    useDesktopStore();
 
 
-const startOpen = ref(false);
+const startOpen =
+    ref(false);
 
-const shuttingDown = ref(false);
-
+const shuttingDown =
+    ref(false);
 
 
 let startupPlayed = false;
 
 
+/*
+ * Startup sound.
+ */
 
 function playStartup() {
 
@@ -48,7 +59,8 @@ function playStartup() {
   startupPlayed = true;
 
 
-  const audio = new Audio("/startup.wav");
+  const audio =
+      new Audio("/startup.wav");
 
   audio.volume = 0.5;
 
@@ -56,14 +68,17 @@ function playStartup() {
   audio.play()
       .catch(() => {});
 
-
 }
 
 
+/*
+ * Logoff sound.
+ */
 
 function playLogoffSound() {
 
-  const audio = new Audio("/win98logoff.mp3");
+  const audio =
+      new Audio("/win98logoff.mp3");
 
   audio.volume = 0.5;
 
@@ -73,14 +88,17 @@ function playLogoffSound() {
 }
 
 
+/*
+ * Log off.
+ */
 
 async function logoff() {
-
 
   startOpen.value = false;
 
 
-  const audio = playLogoffSound();
+  const audio =
+      playLogoffSound();
 
 
   audio.play()
@@ -88,11 +106,14 @@ async function logoff() {
 
 
   await fetch(
+
       "/api/auth/logout",
+
       {
-        method:"POST",
-        credentials:"include"
+        method: "POST",
+        credentials: "include"
       }
+
   );
 
 
@@ -102,18 +123,20 @@ async function logoff() {
 
   };
 
-
 }
 
 
+/*
+ * Shutdown.
+ */
 
 function shutdown() {
-
 
   startOpen.value = false;
 
 
-  const audio = playLogoffSound();
+  const audio =
+      playLogoffSound();
 
 
   audio.play()
@@ -126,17 +149,26 @@ function shutdown() {
 
   };
 
-
 }
 
 
+/*
+ * Close Start Menu when
+ * clicking elsewhere.
+ */
 
 function closeMenu(event) {
 
+  const menu =
+      document.querySelector(
+          ".start-menu"
+      );
 
-  const menu = document.querySelector(".start-menu");
 
-  const button = document.querySelector(".start-button");
+  const button =
+      document.querySelector(
+          ".start-button"
+      );
 
 
   if (
@@ -152,70 +184,91 @@ function closeMenu(event) {
 
   }
 
-
 }
 
 
+/*
+ * Update a window's position.
+ */
 
-function updateWindowPosition(id, position) {
+function updateWindowPosition(
+    id,
+    position
+) {
 
-
-  const window = desktop.windows.find(
-      w => w.id === id
-  );
+  const window =
+      desktop.windows.find(
+          w => w.id === id
+      );
 
 
   if (!window)
     return;
 
 
-  window.x = position.x;
-  window.y = position.y;
+  window.x =
+      position.x;
 
+  window.y =
+      position.y;
 
 }
 
 
+/*
+ * Mounted.
+ */
 
 onMounted(() => {
 
-
   window.addEventListener(
+
       "pointerdown",
+
       playStartup,
+
       {
-        once:true
+        once: true
       }
+
   );
 
 
   window.addEventListener(
-      "click",
-      closeMenu
-  );
 
+      "click",
+
+      closeMenu
+
+  );
 
 });
 
 
+/*
+ * Unmounted.
+ */
 
 onUnmounted(() => {
 
-
   window.removeEventListener(
+
       "pointerdown",
+
       playStartup
+
   );
 
 
   window.removeEventListener(
-      "click",
-      closeMenu
-  );
 
+      "click",
+
+      closeMenu
+
+  );
 
 });
-
 
 </script>
 
@@ -223,11 +276,18 @@ onUnmounted(() => {
 <template>
 
 
+  <!-- ============================= -->
+  <!-- SHUTDOWN -->
+  <!-- ============================= -->
+
   <ShutdownScreen
       v-if="shuttingDown"
   />
 
 
+  <!-- ============================= -->
+  <!-- DESKTOP -->
+  <!-- ============================= -->
 
   <div
       v-else
@@ -235,11 +295,17 @@ onUnmounted(() => {
   >
 
 
+    <!-- ============================= -->
+    <!-- START MENU -->
+    <!-- ============================= -->
+
     <StartMenu
 
         v-if="startOpen"
 
-        :username="props.user?.username ?? 'User'"
+        :username="
+          props.user?.username ?? 'User'
+        "
 
         @logoff="logoff"
 
@@ -248,9 +314,9 @@ onUnmounted(() => {
     />
 
 
-
+    <!-- ============================= -->
     <!-- APPLICATION WINDOWS -->
-
+    <!-- ============================= -->
 
     <DesktopWindow
 
@@ -275,36 +341,67 @@ onUnmounted(() => {
         status="Ready"
 
 
-        @focus="desktop.activate(window.id)"
+        @focus="
+          desktop.activate(window.id)
+        "
 
 
-        @close="desktop.close(window.id)"
+        @close="
+          desktop.close(window.id)
+        "
 
 
-        @minimize="desktop.minimize(window.id)"
+        @minimize="
+          desktop.minimize(window.id)
+        "
 
 
         @update:position="
-            position => updateWindowPosition(
-                window.id,
-                position
-            )
+          position =>
+              updateWindowPosition(
+                  window.id,
+                  position
+              )
         "
 
     >
 
 
+      <!-- ============================= -->
+      <!-- USER MANAGER -->
+      <!-- ============================= -->
+
       <UserManager
 
-          v-if="window.id === 'users'"
+          v-if="
+            window.id === 'users'
+          "
 
       />
 
 
+      <!-- ============================= -->
+      <!-- GROUP MANAGER -->
+      <!-- ============================= -->
 
       <GroupManager
 
-          v-else-if="window.id === 'groups'"
+          v-else-if="
+            window.id === 'groups'
+          "
+
+      />
+
+
+      <!-- ============================= -->
+      <!-- BOARD MANAGER -->
+      <!-- ============================= -->
+
+      <BoardManager
+
+          v-else-if="
+            window.id === 'boards'
+          "
 
       />
 
@@ -312,42 +409,40 @@ onUnmounted(() => {
     </DesktopWindow>
 
 
+    <!-- ============================= -->
+    <!-- TASKBAR -->
+    <!-- ============================= -->
 
     <Taskbar
 
         :start-open="startOpen"
 
-        @start="startOpen = !startOpen"
+        @start="
+          startOpen = !startOpen
+        "
 
     />
 
 
   </div>
 
-
 </template>
 
 
 <style scoped>
 
-
 .desktop {
 
-  width:100%;
+  width: 100%;
 
-  height:100vh;
+  height: 100vh;
 
+  background: #008080;
 
-  background:#008080;
+  overflow: hidden;
 
-
-  overflow:hidden;
-
-
-  position:relative;
+  position: relative;
 
 }
-
-
 
 </style>

@@ -116,21 +116,20 @@ function openBoardManager() {
 
                 </div>
 
-                <div
-                    class="menu-item"
-                    @click="openBoardManager"
-                >
-                  <img
-                      class="menu-icon"
-                      src="https://win98icons.alexmeub.com/icons/png/directory_open_file_mydocs-4.png"
-                  >
-
-                  Board Manager
-                </div>
-
-
               </div>
 
+            </div>
+
+            <div
+                class="menu-item"
+                @click="openBoardManager"
+            >
+              <img
+                  class="menu-icon"
+                  src="https://win98icons.alexmeub.com/icons/png/directory_open_file_mydocs-4.png"
+              >
+
+              Board Manager
             </div>
 
           </div>

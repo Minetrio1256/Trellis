@@ -16,6 +16,8 @@ const creating = ref(false);
 
 const loading = ref(false);
 
+const saving = ref(false);
+
 const error = ref("");
 
 
@@ -54,8 +56,8 @@ async function api(url, options = {}) {
 
 
 /*
- * Load boards available to the
- * current user.
+ * Load all boards accessible
+ * to the current user.
  */
 
 async function loadBoards() {
@@ -70,6 +72,7 @@ async function loadBoards() {
         "/api/boards"
     );
 
+
     if (!res.ok) {
 
       throw new Error(
@@ -78,6 +81,7 @@ async function loadBoards() {
 
     }
 
+
     boards.value =
         await res.json();
 
@@ -85,7 +89,8 @@ async function loadBoards() {
   catch (err) {
 
     error.value =
-        err.message;
+        err.message ||
+        "Failed loading boards";
 
   }
   finally {
@@ -99,50 +104,70 @@ async function loadBoards() {
 
 /*
  * Select a board.
+ *
+ * Fetch the full board from
+ * GET /api/boards/:uuid
  */
 
 async function selectBoard(board) {
 
   error.value = "";
 
-  const res = await api(
-      `/api/boards/${encodeURIComponent(board.uuid)}`
-  );
+  try {
 
-  if (!res.ok) {
+    const res = await api(
 
-    error.value =
-        "Failed loading board";
+        `/api/boards/${encodeURIComponent(board.uuid)}`
 
-    return;
+    );
+
+
+    if (!res.ok) {
+
+      throw new Error(
+          "Failed loading board"
+      );
+
+    }
+
+
+    const data =
+        await res.json();
+
+
+    selected.value =
+        data;
+
+
+    form.value = {
+
+      name:
+          data.name ?? "",
+
+      description:
+          data.description ?? ""
+
+    };
+
+
+    editing.value = true;
+
+    creating.value = false;
 
   }
+  catch (err) {
 
-  const data =
-      await res.json();
+    error.value =
+        err.message ||
+        "Failed loading board";
 
-  selected.value =
-      data;
-
-  form.value = {
-
-    name:
-        data.name ?? "",
-
-    description:
-        data.description ?? ""
-
-  };
-
-  editing.value = true;
-
-  creating.value = false;
+  }
 
 }
 
 
 /*
- * Start creating a board.
+ * Start creating a new board.
  */
 
 function newBoard() {
@@ -157,9 +182,12 @@ function newBoard() {
 
   };
 
+
   editing.value = true;
 
   creating.value = true;
+
+  error.value = "";
 
 }
 
@@ -176,6 +204,11 @@ function cancelEdit() {
 
   creating.value = false;
 
+  saving.value = false;
+
+  error.value = "";
+
+
   form.value = {
 
     name: "",
@@ -188,95 +221,175 @@ function cancelEdit() {
 
 
 /*
- * Save board.
+ * Save a board.
+ *
+ * New:
+ * POST /api/boards
+ *
+ * Existing:
+ * PATCH /api/boards/:uuid
  */
 
 async function saveBoard() {
 
   error.value = "";
 
-  const creatingBoard =
-      creating.value;
 
-
-  let url =
-      "/api/boards";
-
-  let method =
-      "POST";
-
-
-  if (!creatingBoard && selected.value) {
-
-    url =
-        `/api/boards/${encodeURIComponent(selected.value.uuid)}`;
-
-    method =
-        "PATCH";
-
-  }
-
-
-  const res = await api(
-
-      url,
-
-      {
-
-        method,
-
-        body: JSON.stringify({
-
-          name:
-          form.value.name,
-
-          description:
-          form.value.description
-
-        })
-
-      }
-
-  );
-
-
-  if (!res.ok) {
+  if (!form.value.name.trim()) {
 
     error.value =
-        "Failed saving board";
+        "Board name is required.";
 
     return;
 
   }
 
 
-  /*
-   * New board.
-   *
-   * POST returns:
-   *
-   * {
-   *     uuid: "..."
-   * }
-   */
+  saving.value = true;
 
-  if (creatingBoard) {
 
-    const data =
-        await res.json();
+  try {
+
+    let url =
+        "/api/boards";
+
+    let method =
+        "POST";
+
+
+    /*
+     * Editing an existing board.
+     */
+
+    if (
+        !creating.value &&
+        selected.value
+    ) {
+
+      url =
+          `/api/boards/${encodeURIComponent(selected.value.uuid)}`;
+
+      method =
+          "PATCH";
+
+    }
+
+
+    const res = await api(
+
+        url,
+
+        {
+
+          method,
+
+          body: JSON.stringify({
+
+            name:
+                form.value.name.trim(),
+
+            description:
+                form.value.description.trim()
+
+          })
+
+        }
+
+    );
+
+
+    if (!res.ok) {
+
+      if (res.status === 403) {
+
+        throw new Error(
+            "You do not have permission to modify this board."
+        );
+
+      }
+
+
+      throw new Error(
+          "Failed saving board."
+      );
+
+    }
+
+
+    /*
+     * New board.
+     *
+     * POST returns:
+     *
+     * {
+     *     uuid: "..."
+     * }
+     */
+
+    if (method === "POST") {
+
+      const data =
+          await res.json();
+
+
+      await loadBoards();
+
+
+      /*
+       * Find the newly-created board
+       * in the refreshed list.
+       */
+
+      const newBoardData =
+          boards.value.find(
+              board =>
+                  board.uuid === data.uuid
+          );
+
+
+      if (newBoardData) {
+
+        await selectBoard(
+            newBoardData
+        );
+
+      }
+      else {
+
+        cancelEdit();
+
+      }
+
+
+      return;
+
+    }
+
+
+    /*
+     * Existing board.
+     *
+     * PATCH returns 204.
+     */
+
+    const uuid =
+        selected.value.uuid;
+
 
     await loadBoards();
 
-    const newBoardData =
+
+    const updated =
         boards.value.find(
             board =>
-                board.uuid === data.uuid
+                board.uuid === uuid
         );
 
-    if (newBoardData) {
+
+    if (updated) {
 
       await selectBoard(
-          newBoardData
+          updated
       );
 
     }
@@ -286,37 +399,17 @@ async function saveBoard() {
 
     }
 
-    return;
+  }
+  catch (err) {
+
+    error.value =
+        err.message ||
+        "Failed saving board.";
 
   }
+  finally {
 
-
-  /*
-   * Existing board.
-   *
-   * PATCH returns 204.
-   */
-
-  await loadBoards();
-
-
-  const updated =
-      boards.value.find(
-          board =>
-              board.uuid === selected.value?.uuid
-      );
-
-
-  if (updated) {
-
-    await selectBoard(
-        updated
-    );
-
-  }
-  else {
-
-    cancelEdit();
+    saving.value = false;
 
   }
 
@@ -324,7 +417,7 @@ async function saveBoard() {
 
 
 /*
- * Delete board.
+ * Delete selected board.
  */
 
 async function deleteBoard() {
@@ -333,9 +426,14 @@ async function deleteBoard() {
     return;
 
 
+  const name =
+      selected.value.name ||
+      "this board";
+
+
   if (
       !confirm(
-          `Delete "${selected.value.name}"?`
+          `Delete "${name}"?`
       )
   ) {
 
@@ -346,33 +444,59 @@ async function deleteBoard() {
 
   error.value = "";
 
+  saving.value = true;
 
-  const res = await api(
 
-      `/api/boards/${encodeURIComponent(selected.value.uuid)}`,
+  try {
 
-      {
+    const res = await api(
 
-        method: "DELETE"
+        `/api/boards/${encodeURIComponent(selected.value.uuid)}`,
+
+        {
+
+          method: "DELETE"
+
+        }
+
+    );
+
+
+    if (!res.ok) {
+
+      if (res.status === 403) {
+
+        throw new Error(
+            "You do not have permission to delete this board."
+        );
 
       }
 
-  );
+
+      throw new Error(
+          "Failed deleting board."
+      );
+
+    }
 
 
-  if (!res.ok) {
+    cancelEdit();
 
-    error.value =
-        "Failed deleting board";
-
-    return;
+    await loadBoards();
 
   }
+  catch (err) {
 
+    error.value =
+        err.message ||
+        "Failed deleting board.";
 
-  cancelEdit();
+  }
+  finally {
 
-  await loadBoards();
+    saving.value = false;
+
+  }
 
 }
 
@@ -392,6 +516,11 @@ onMounted(
 
   <div class="board-manager">
 
+
+    <!-- ========================= -->
+    <!-- MAIN COLUMNS -->
+    <!-- ========================= -->
+
     <div class="columns">
 
 
@@ -409,6 +538,7 @@ onMounted(
         <button
             class="new"
             type="button"
+            :disabled="loading || saving"
             @click="newBoard"
         >
 
@@ -417,12 +547,19 @@ onMounted(
         </button>
 
 
-        <div v-if="loading">
+        <!-- Loading -->
+
+        <div
+            v-if="loading"
+            class="empty"
+        >
 
           Loading...
 
         </div>
 
+
+        <!-- Empty -->
 
         <div
             v-else-if="boards.length === 0"
@@ -434,19 +571,30 @@ onMounted(
         </div>
 
 
+        <!-- Board list -->
+
         <div
             v-for="board in boards"
             :key="board.uuid"
             class="board-item"
+            :class="{
+                        selected:
+                            selected &&
+                            selected.uuid === board.uuid
+                    }"
             @click="selectBoard(board)"
         >
 
           <img
               src="https://win98icons.alexmeub.com/icons/png/directory_open_file_mydocs-4.png"
+              alt=""
           >
 
+
           <span>
+
                         {{ board.name }}
+
                     </span>
 
         </div>
@@ -474,44 +622,92 @@ onMounted(
         <template v-if="editing">
 
 
+          <!-- ========================= -->
           <!-- NAME -->
+          <!-- ========================= -->
 
           <label>
+
             Name
+
           </label>
+
 
           <input
               v-model="form.name"
+              type="text"
+              :disabled="saving"
+              autocomplete="off"
           >
 
 
+          <!-- ========================= -->
           <!-- DESCRIPTION -->
+          <!-- ========================= -->
 
           <label>
+
             Description
+
           </label>
+
 
           <textarea
               v-model="form.description"
-          />
+              :disabled="saving"
+          ></textarea>
 
 
+          <!-- ========================= -->
+          <!-- UUID -->
+          <!-- ========================= -->
+
+          <template v-if="selected">
+
+            <label>
+
+              UUID
+
+            </label>
+
+
+            <input
+                :value="selected.uuid"
+                type="text"
+                readonly
+            >
+
+          </template>
+
+
+          <!-- ========================= -->
           <!-- ACTIONS -->
+          <!-- ========================= -->
 
           <div class="actions">
 
+
             <button
                 type="button"
+                :disabled="
+                                saving ||
+                                !form.name.trim()
+                            "
                 @click="saveBoard"
             >
 
-              Save
+              {{
+                saving
+                    ? "Saving..."
+                    : "Save"
+              }}
 
             </button>
 
 
             <button
                 type="button"
+                :disabled="saving"
                 @click="cancelEdit"
             >
 
@@ -521,8 +717,9 @@ onMounted(
 
 
             <button
-                v-if="selected"
+                v-if="selected && !creating"
                 type="button"
+                :disabled="saving"
                 @click="deleteBoard"
             >
 
@@ -530,24 +727,45 @@ onMounted(
 
             </button>
 
+
           </div>
 
 
         </template>
 
 
-        <p v-else>
+        <!-- Nothing selected -->
 
-          Select a board.
+        <div
+            v-else
+            class="nothing-selected"
+        >
 
-        </p>
+          <p>
+
+            Select a board.
+
+          </p>
+
+
+          <p>
+
+            Or click
+            <b>New</b>
+            to create one.
+
+          </p>
+
+        </div>
 
       </fieldset>
 
     </div>
 
 
+    <!-- ========================= -->
     <!-- ERROR -->
+    <!-- ========================= -->
 
     <div
         v-if="error"
@@ -559,7 +777,9 @@ onMounted(
     </div>
 
 
+    <!-- ========================= -->
     <!-- STATUS BAR -->
+    <!-- ========================= -->
 
     <div class="status-bar">
 
@@ -572,11 +792,10 @@ onMounted(
 
       <p class="status-bar-field">
 
-        {{ boards.length }}
-        board{{
-          boards.length === 1
-              ? ""
-              : "s"
+        {{
+          loading
+              ? "Loading..."
+              : `${boards.length} board${boards.length === 1 ? "" : "s"}`
         }}
 
       </p>
@@ -612,6 +831,10 @@ onMounted(
 }
 
 
+/*
+ * Board list.
+ */
+
 .list {
 
   width: 220px;
@@ -633,6 +856,10 @@ onMounted(
 
 }
 
+
+/*
+ * Board item.
+ */
 
 .board-item {
 
@@ -660,7 +887,18 @@ onMounted(
 }
 
 
+.board-item.selected {
+
+  background: #000080;
+
+  color: white;
+
+}
+
+
 .board-item span {
+
+  min-width: 0;
 
   overflow: hidden;
 
@@ -682,6 +920,10 @@ onMounted(
 }
 
 
+/*
+ * Empty / loading state.
+ */
+
 .empty {
 
   padding: 5px;
@@ -690,6 +932,10 @@ onMounted(
 
 }
 
+
+/*
+ * Form controls.
+ */
 
 input,
 textarea {
@@ -712,12 +958,27 @@ textarea {
 }
 
 
+input[readonly] {
+
+  color: #555;
+
+}
+
+
+/*
+ * New button.
+ */
+
 .new {
 
   margin-bottom: 10px;
 
 }
 
+
+/*
+ * Actions.
+ */
 
 .actions {
 
@@ -727,8 +988,34 @@ textarea {
 
   margin-top: 8px;
 
+  flex-wrap: wrap;
+
 }
 
+
+/*
+ * Nothing selected.
+ */
+
+.nothing-selected {
+
+  color: #666;
+
+}
+
+
+.nothing-selected p {
+
+  margin-top: 5px;
+
+  margin-bottom: 8px;
+
+}
+
+
+/*
+ * Error.
+ */
 
 .error {
 
@@ -739,6 +1026,17 @@ textarea {
   color: #800000;
 
   overflow-wrap: anywhere;
+
+}
+
+
+/*
+ * Status bar.
+ */
+
+.status-bar {
+
+  margin-top: 4px;
 
 }
 
