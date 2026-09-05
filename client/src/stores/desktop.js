@@ -17,11 +17,15 @@ export const useDesktopStore = defineStore("desktop", () => {
             case "groups":
                 return "Group Manager";
 
+            case "boards":
+                return "Board Manager";
+
             default:
                 return id;
         }
 
     }
+
 
     function icon(id) {
 
@@ -32,6 +36,9 @@ export const useDesktopStore = defineStore("desktop", () => {
 
             case "groups":
                 return "https://win98icons.alexmeub.com/icons/png/user_computer_pair-0.png";
+
+            case "boards":
+                return "https://win98icons.alexmeub.com/icons/png/directory_open_file_mydocs-4.png";
 
             default:
                 return "";
